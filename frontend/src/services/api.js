@@ -99,6 +99,9 @@ export const api = {
   updatePassword: (payload) =>
     request("/user/updatePassword", { method: "PATCH", body: payload }),
 
+  // Homepage content (admin-editable; see admin "Site Content")
+  getSiteContent: () => request("/site-content", { cache: "no-store" }),
+
   // Properties
   // Admins actively edit these via the admin panel and expect the public
   // site to reflect changes immediately, so skip the Data Cache entirely

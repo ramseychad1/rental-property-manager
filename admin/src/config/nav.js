@@ -7,6 +7,7 @@ import {
   NotebookPen,
   MapPinned,
   ListX,
+  LayoutTemplate,
 } from "lucide-react";
 import { vertical } from "@/config/vertical";
 
@@ -41,6 +42,12 @@ export const navConfig = [
     to: "/things-to-do",
     icon: MapPinned,
     testid: "nav-things-to-do",
+  },
+  {
+    label: "Site Content",
+    to: "/site-content",
+    icon: LayoutTemplate,
+    testid: "nav-site-content",
   },
   {
     label: "Users",

@@ -1,53 +1,55 @@
 // components/home/LifestyleSection.jsx
 import Image from "next/image";
 import Link from "next/link";
+import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const LIFESTYLE_IMAGES = [
-  "/images/lifestyle-image-1.png",
-  "/images/lifestyle-image-2.png",
-  "/images/lifestyle-image-3.png",
-  "/images/lifestyle-image-4.png",
-];
+const lines = (s) => String(s ?? "").split("\n");
 
-export default function LifestyleSection() {
+export default function LifestyleSection({ content: c }) {
+  const images = c.images?.length ? c.images : [];
   return (
-    <section className="mx-auto max-w-7xl px-5 py-20 grid lg:grid-cols-2 gap-14 items-center">
-      <div>
-        <h2 className="font-display text-3xl sm:text-4xl font-semi-bold text-[var(--color-primary)] leading-tight">
-          Not just a stay.
-        </h2>
-        <p className="font-script text-6xl sm:text-7xl text-[var(--color-primary)] mt-3 leading-none">
-          A LIFESTYLE
-        </p>
-        <div className="mt-8 space-y-5 text-[var(--color-muted-foreground)] text-base leading-relaxed max-w-xl">
-          <p>
-            Wake up to calm bay waters. Paddle out before breakfast. Spend
-            your afternoons at the sandbar, and your evenings dockside under
-            the lights.
+    <section style={{ backgroundColor: c.backgroundColor }}>
+      <div className="mx-auto max-w-7xl px-5 py-20 grid lg:grid-cols-2 gap-14 items-center">
+        <div>
+          <h2 className="font-display text-3xl sm:text-4xl font-semi-bold leading-tight"
+            style={{ color: c.headingColor }}>
+            {c.heading}
+          </h2>
+          <p className="font-script text-6xl sm:text-7xl mt-3 leading-none" style={{ color: c.headingColor }}>
+            {c.script}
           </p>
-          <p>
-            Want a private chef after a long day on the water? Done. Need the
-            fridge stocked before you arrive? Already handled.
-          </p>
-          <p className="text-[var(--color-foreground)] font-semibold">
-            This isn't a vacation rental.
-            <br />
-            It's your Keys routine.
-          </p>
-        </div>
-        <Button asChild size="lg" className="mt-8">
-          <Link href="/properties">Read more about HOME</Link>
-        </Button>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {LIFESTYLE_IMAGES.map((src, i) => (
-          <div key={src}
-            className={`relative aspect-[4/3] overflow-hidden rounded-2xl ${i % 2 ? "translate-y-6" : ""}`}>
-            <Image src={src} alt="Lifestyle" fill className="object-cover"
-              sizes="(max-width: 768px) 50vw, 33vw" />
+          <div className="mt-8 space-y-5 text-base leading-relaxed max-w-xl" style={{ color: c.textColor }}>
+            {c.paragraphs?.map((p, i) => <p key={i}>{p}</p>)}
+            {c.emphasis && (
+              <p className="font-semibold">
+                {lines(c.emphasis).map((line, i, arr) => (
+                  <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+                ))}
+              </p>
+            )}
           </div>
-        ))}
+          {c.buttonLabel && (
+            <Button asChild size="lg" className="mt-8">
+              <Link href="/properties">{c.buttonLabel}</Link>
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {(images.length ? images : [null, null, null, null]).map((src, i) => (
+            <div key={i}
+              className={`relative aspect-[4/3] overflow-hidden rounded-2xl bg-[var(--color-muted)] ${i % 2 ? "translate-y-6" : ""}`}>
+              {src ? (
+                <Image src={src} alt="Lifestyle" fill className="object-cover"
+                  sizes="(max-width: 768px) 50vw, 33vw" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-[var(--color-border)]">
+                  <ImageIcon className="h-10 w-10" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

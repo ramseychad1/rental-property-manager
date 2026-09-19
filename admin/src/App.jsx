@@ -20,6 +20,7 @@ const ItemDetailPage = lazy(() => import("@/pages/items/ItemDetail"));
 const BookingListPage = lazy(() => import("@/pages/bookings/BookingList"));
 const UserListPage = lazy(() => import("@/pages/users/UserList"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
+const SiteContentPage = lazy(() => import("@/pages/siteContent/SiteContent"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const BlogListPage = lazy(() => import("@/pages/blog/BlogList"));
 const BlogDetailPage = lazy(() => import("@/pages/blog/BlogDetail"));
@@ -78,6 +79,7 @@ export default function App() {
                     <Route path="pricing" element={<Navigate to={`/${vertical.item.slug}`} replace />} />
                     <Route path="users" element={<UserListPage />} />
                     <Route path="logs" element={<ErrorLogsPage />} />
+                    <Route path="site-content" element={<SiteContentPage />} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>
 

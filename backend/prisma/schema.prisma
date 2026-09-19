@@ -149,3 +149,30 @@ model Booking {
   @@index([propertyId])
   @@index([userId])
 }
+
+// One row per condo complex / deployment. Single-tenant for now: exactly one
+// "default" row is created lazily by the site-content controller. Multi-complex
+// later means adding rows and resolving the site from the request domain.
+model Site {
+  id        String   @id @default(cuid())
+  slug      String   @unique @default("default")
+  name      String   @default("My Property Site")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  content SiteContent[]
+}
+
+// Homepage content, one JSON blob per section (hero, featureBar, lifestyle,
+// nearby, testimonials, trustBand). Missing sections fall back to the defaults
+// in src/lib/siteContent.js.
+model SiteContent {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  section   String
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteId, section])
+}

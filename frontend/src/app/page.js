@@ -5,10 +5,10 @@ import LifestyleSection from "@/components/home/LifestyleSection";
 import NearbySection from "@/components/home/NearbySection";
 import TestimonialSlider from "@/components/home/TestimonialSlider";
 import TealBand from "@/components/home/TealBand";
-import { testimonials } from "@/lib/mockData";
 
 export default async function HomePage() {
   let properties = [];
+  let content = null;
 
   try {
     const response = await api.listProperties();
@@ -17,16 +17,26 @@ export default async function HomePage() {
     console.error("Failed to load homepage properties", error);
   }
 
+  try {
+    const response = await api.getSiteContent();
+    content = response.data;
+  } catch (error) {
+    console.error("Failed to load homepage content", error);
+  }
+  if (!content) return null;
+
   return (
     <div>
-      <HeroSection initialProperties={properties} />
-      <OrangeBar />
-      <LifestyleSection />
-      <div className="mx-auto max-w-7xl px-5 pb-20 grid lg:grid-cols-[2fr_1fr] gap-10 items-stretch">
-        <NearbySection />
-        <TestimonialSlider testimonials={testimonials} />
+      <HeroSection initialProperties={properties} content={content.hero} />
+      <OrangeBar content={content.featureBar} />
+      <LifestyleSection content={content.lifestyle} />
+      <div style={{ backgroundColor: content.nearby.backgroundColor }}>
+        <div className="mx-auto max-w-7xl px-5 pb-20 grid lg:grid-cols-[2fr_1fr] gap-10 items-stretch">
+          <NearbySection content={content.nearby} />
+          <TestimonialSlider content={content.testimonials} />
+        </div>
       </div>
-      <TealBand />
+      <TealBand content={content.trustBand} />
     </div>
   );
 }

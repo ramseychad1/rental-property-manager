@@ -297,3 +297,28 @@ export const errorLogsApi = {
 };
 
 export default http;
+
+
+// Homepage content APIs
+export const siteContentApi = {
+  get: async () => {
+    const { data } = await http.get("/site-content");
+    return data?.data;
+  },
+  save: async (section, body) => {
+    const { data } = await http.put(`/site-content/${section}`, body);
+    return data?.data;
+  },
+  reset: async (section) => {
+    const { data } = await http.delete(`/site-content/${section}`);
+    return data?.data;
+  },
+  uploadImage: async (file) => {
+    const fd = new FormData();
+    fd.append("image", file);
+    const { data } = await http.post("/site-content/upload", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data?.data?.url;
+  },
+};

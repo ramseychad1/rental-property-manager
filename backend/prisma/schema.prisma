@@ -9,7 +9,8 @@ datasource db {
 
 enum UserRole {
   Guest
-  Admin
+  Owner
+  SuperAdmin
 }
 
 enum PropertyStatus {
@@ -46,9 +47,15 @@ model User {
   picture      String?
   role         UserRole  @default(Guest)
   isVerified   Boolean   @default(false)
+  // Deactivated users can't sign in or use an existing session.
+  isActive           Boolean @default(true)
+  // Set when a SuperAdmin creates the account or resets its password; the API
+  // blocks everything except changing the password until it's cleared.
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   bookings     Booking[]
+  ownedProperties Property[]
 }
 
 model VerificationCode {
@@ -93,11 +100,17 @@ model Property {
   thumbnailUrl String?
   gallery      String[]
 
+  // Owner who manages this property. Null = unassigned (SuperAdmin-only).
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   seasons  Season[]
   bookings Booking[]
+
+  @@index([ownerId])
 }
 
 model Season {

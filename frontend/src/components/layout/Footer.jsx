@@ -14,10 +14,10 @@ export default function Footer() {
             <Image
               src="/logo.png"
               alt="Logo"
-              width={150}
-              height={100}
+              width={440}
+              height={289}
               priority
-              style={{ width: "auto", height: "auto" }}
+              className="h-24 w-auto"
             />
           </Link>
           <p className="mt-5 text-sm text-[var(--color-muted-foreground)] max-w-xs">

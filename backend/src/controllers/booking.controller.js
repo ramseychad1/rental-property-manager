@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeBooking } from "../lib/serialize.js";
+import { isStaff, isSuperAdmin, propertyScope, bookingScope } from "../lib/access.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -151,7 +152,7 @@ export async function listBookings(req, res, next) {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
     const { bookingStatus, paymentStatus, propertyId, search } = req.query;
 
-    const where = {};
+    const where = { ...bookingScope(req.user) };
     if (bookingStatus && bookingStatus !== "all") where.bookingStatus = bookingStatus;
     if (paymentStatus && paymentStatus !== "all") where.paymentStatus = paymentStatus;
     if (propertyId) where.propertyId = propertyId;
@@ -200,8 +201,9 @@ export async function getBooking(req, res, next) {
     });
     if (!booking) throw new ApiError("Booking not found.", 404);
 
-    const isOwner = booking.userId && booking.userId === req.user.id;
-    if (req.user.role !== "Admin" && !isOwner) {
+    const isGuest = booking.userId && booking.userId === req.user.id;
+    const managesProperty = isSuperAdmin(req.user) || (isStaff(req.user) && booking.property.ownerId === req.user.id);
+    if (!isGuest && !managesProperty) {
       throw new ApiError("Booking not found.", 404);
     }
 
@@ -213,7 +215,7 @@ export async function getBooking(req, res, next) {
 
 async function transition(req, res, next, data, message) {
   try {
-    const existing = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
     if (!existing) throw new ApiError("Booking not found.", 404);
 
     const booking = await prisma.booking.update({
@@ -254,7 +256,7 @@ export async function setPaymentStatus(req, res, next) {
   const { paymentStatus } = schema.parse(req.body);
 
   try {
-    const existing = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
     if (!existing) throw new ApiError("Booking not found.", 404);
 
     const data = { paymentStatus };
@@ -334,12 +336,16 @@ export async function analytics(req, res, next) {
   try {
     const { start, end, bucket, label } = resolveRange(req.query);
 
+    const propScope = propertyScope(req.user);
     const [totalProperties, activeProperties, totalUsers, bookingsInRange] = await Promise.all([
-      prisma.property.count(),
-      prisma.property.count({ where: { status: "active" } }),
-      prisma.user.count(),
+      prisma.property.count({ where: propScope }),
+      prisma.property.count({ where: { ...propScope, status: "active" } }),
+      // Owners see how many distinct guests have booked their properties.
+      isSuperAdmin(req.user)
+        ? prisma.user.count()
+        : prisma.booking.findMany({ where: bookingScope(req.user), distinct: ["userId"], select: { userId: true } }).then((r) => r.length),
       prisma.booking.findMany({
-        where: { createdAt: { gte: start, lt: end } },
+        where: { ...bookingScope(req.user), createdAt: { gte: start, lt: end } },
         include: { property: true, user: true },
         orderBy: { createdAt: "desc" },
       }),

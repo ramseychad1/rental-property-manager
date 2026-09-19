@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AdminRoute } from "@/router/ProtectedRoute";
+import { AdminRoute, SuperAdminRoute } from "@/router/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import { vertical } from "@/config/vertical";
@@ -63,13 +63,13 @@ export default function App() {
                       <Route path=":id" element={<ItemDetailPage />} />
                       <Route path=":id/edit" element={<ItemFormPage mode="edit" />} />
                     </Route>
-                    <Route path="blogs">
+                    <Route path="blogs" element={<SuperAdminRoute><Outlet /></SuperAdminRoute>}>
                       <Route index element={<BlogListPage />} />
                       <Route path="new" element={<BlogFormPage mode="create" />} />
                       <Route path=":id" element={<BlogDetailPage />} />
                       <Route path=":id/edit" element={<BlogFormPage mode="edit" />} />
                     </Route>
-                    <Route path="things-to-do">
+                    <Route path="things-to-do" element={<SuperAdminRoute><Outlet /></SuperAdminRoute>}>
                       <Route index element={<ThingsToDoList />} />
                       <Route path="new" element={<ThingsToDoForm mode="create" />} />
                       <Route path=":id" element={<ThingsToDoDetail />} />
@@ -77,9 +77,9 @@ export default function App() {
                     </Route>
                     <Route path="bookings" element={<BookingListPage />} />
                     <Route path="pricing" element={<Navigate to={`/${vertical.item.slug}`} replace />} />
-                    <Route path="users" element={<UserListPage />} />
-                    <Route path="logs" element={<ErrorLogsPage />} />
-                    <Route path="site-content" element={<SiteContentPage />} />
+                    <Route path="users" element={<SuperAdminRoute><UserListPage /></SuperAdminRoute>} />
+                    <Route path="logs" element={<SuperAdminRoute><ErrorLogsPage /></SuperAdminRoute>} />
+                    <Route path="site-content" element={<SuperAdminRoute><SiteContentPage /></SuperAdminRoute>} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>
 

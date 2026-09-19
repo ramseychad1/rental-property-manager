@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { itemsApi } from "@/lib/api";
+import { itemsApi, usersApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { vertical } from "@/config/vertical";
@@ -108,6 +109,17 @@ export default function ItemFormPage({ mode = "create" }) {
     },
   });
 
+  // SuperAdmin can assign the property to an Owner ("none" = unassigned).
+  // Owners always own what they create, so the picker is hidden for them.
+  const { isSuperAdmin } = useAuth();
+  const [ownerId, setOwnerId] = useState("none");
+  const { data: ownerData } = useQuery({
+    queryKey: ["owners"],
+    queryFn: () => usersApi.list({ role: "Owner", limit: 100 }),
+    enabled: isSuperAdmin,
+  });
+  const owners = ownerData?.users || [];
+
   // ✅ FIX 3: reset bhi nested structure ke saath
   useEffect(() => {
     if (existing) {
@@ -134,6 +146,7 @@ export default function ItemFormPage({ mode = "create" }) {
         bathrooms: existing.bathrooms,
         status: existing.status,
       });
+      setOwnerId(existing.ownerId || "none");
       setThumbnailUrl(existing.images?.thumbnail || "");
       setGalleryUrls(existing.images?.gallery || []);
       setAmenities(existing.amenities || []);
@@ -177,6 +190,7 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("bedrooms", String(values.bedrooms));
     fd.append("bathrooms", String(values.bathrooms));
     fd.append("status", values.status);
+    if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega
     fd.append("location[url]", values.location.url);
@@ -414,6 +428,23 @@ export default function ItemFormPage({ mode = "create" }) {
                 <Label>Zip code</Label>
                 <Input data-testid="form-zip" {...register("location.zipCode")} />
               </div>
+
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Owner</Label>
+                  <Select value={ownerId} onValueChange={setOwnerId}>
+                    <SelectTrigger data-testid="form-owner">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned (Super Admin only)</SelectItem>
+                      {owners.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>{o.name} ({o.email})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Status</Label>

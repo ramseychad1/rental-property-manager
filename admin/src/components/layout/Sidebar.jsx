@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navConfig } from "@/config/nav";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Tooltip,
   TooltipContent,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 
 export default function Sidebar({ collapsed, onToggle }) {
+  const { isSuperAdmin } = useAuth();
   return (
     <aside
       data-testid="app-sidebar"
@@ -26,13 +28,17 @@ export default function Sidebar({ collapsed, onToggle }) {
           collapsed && "justify-center px-0",
         )}
       >
-        <img src="/logo.png" className="w-42" alt="" />
+        <img
+          src={collapsed ? "/logo-mark.png" : "/logo.png"}
+          className={collapsed ? "h-10 w-auto" : "h-14 w-auto"}
+          alt="Rental Property Manager"
+        />
       </div>
 
       {/* Nav */}
       <TooltipProvider delayDuration={0}>
         <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto scrollbar-thin">
-          {navConfig.map((item) => {
+          {navConfig.filter((item) => isSuperAdmin || !item.superAdminOnly).map((item) => {
             const link = (
               <NavLink
                 key={item.to}

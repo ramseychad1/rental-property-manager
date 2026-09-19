@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 
 import routes from "./routes/index.js";
-import { attachUser } from "./middleware/auth.js";
+import { attachUser, enforcePasswordChange } from "./middleware/auth.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { UPLOADS_DIR } from "./lib/storage.js";
 
@@ -37,7 +37,7 @@ app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.use(attachUser);
 
-app.use("/api", routes);
+app.use("/api", enforcePasswordChange, routes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

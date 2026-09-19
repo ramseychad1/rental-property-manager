@@ -9,7 +9,7 @@ import {
   pricingPreview,
   checkAvailability,
 } from "../controllers/property.controller.js";
-import { requireAdmin } from "../middleware/auth.js";
+import { requireStaff } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
 
 const router = Router();
@@ -23,9 +23,9 @@ router.get("/", listProperties);
 router.get("/:id", getProperty);
 router.get("/:id/booked-dates", bookedDates);
 router.get("/:id/pricing", pricingPreview);
-router.get("/:id/check-availability", requireAdmin, checkAvailability);
-router.post("/", requireAdmin, propertyUpload, createProperty);
-router.patch("/:id", requireAdmin, propertyUpload, updateProperty);
-router.delete("/:id", requireAdmin, removeProperty);
+router.get("/:id/check-availability", requireStaff, checkAvailability);
+router.post("/", requireStaff, propertyUpload, createProperty);
+router.patch("/:id", requireStaff, propertyUpload, updateProperty);
+router.delete("/:id", requireStaff, removeProperty);
 
 export default router;

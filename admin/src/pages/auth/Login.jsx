@@ -73,7 +73,7 @@ export default function LoginPage() {
           className="rounded-3xl overflow-hidden border border-[#2A2A2A] bg-[#111111]/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
         >
           <div className="py-5 mb-4 flex items-center justify-center bg-[#F5F5F5]">
-            <img src="/logo.png" alt="" />
+            <img src="/logo.png" alt="Rental Property Manager" className="h-32 w-auto" />
           </div>
 
           <div className="pb-6 px-6">

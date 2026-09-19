@@ -4,6 +4,7 @@ import { ok, fail, ApiError } from "../lib/response.js";
 import { serializeProperty } from "../lib/serialize.js";
 import { unflatten } from "../middleware/upload.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
+import { isStaff, isSuperAdmin, propertyScope, findManagedProperty } from "../lib/access.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -30,6 +31,7 @@ const propertySchema = z.object({
       url: z.string().trim().optional().default(""),
     })
     .default({}),
+  ownerId: z.string().trim().optional(),
   price: z
     .object({
       nightly: z.coerce.number().min(0).default(0),
@@ -41,16 +43,36 @@ const propertySchema = z.object({
     .default({}),
 });
 
+// Must match the X-Client header set in admin/src/lib/api.js.
+const ADMIN_CLIENT = "rental-property-manager-admin-panel";
+
+// Owners always own what they create. A SuperAdmin may assign any Owner or
+// SuperAdmin (or leave it unassigned).
+async function resolveOwnerId(user, requested) {
+  if (!isSuperAdmin(user)) return user.id;
+  if (!requested) return null;
+  const owner = await prisma.user.findFirst({
+    where: { id: requested, role: { in: ["Owner", "SuperAdmin"] }, isActive: true },
+  });
+  if (!owner) throw new ApiError("Selected owner not found.", 400);
+  return owner.id;
+}
+
 export async function listProperties(req, res, next) {
   try {
-    const isAdmin = req.user?.role === "Admin";
+    // The admin panel asks for its "manage" view (all statuses, only the
+    // properties the user may manage) via this header. Everyone else - the
+    // public site, even when a staff member is signed in on it - sees active
+    // properties only.
+    const managing = isStaff(req.user) && req.get("X-Client") === ADMIN_CLIENT;
     const { search, status } = req.query;
 
     const where = {};
-    if (!isAdmin) {
+    if (!managing) {
       where.status = "active";
-    } else if (status && status !== "all") {
-      where.status = status;
+    } else {
+      Object.assign(where, propertyScope(req.user));
+      if (status && status !== "all") where.status = status;
     }
 
     if (search) {
@@ -70,11 +92,12 @@ export async function listProperties(req, res, next) {
 
 export async function getProperty(req, res, next) {
   try {
-    const isAdmin = req.user?.role === "Admin" || req.query.user === "admin";
     const property = await prisma.property.findUnique({ where: { id: req.params.id } });
 
     if (!property) throw new ApiError("Property not found.", 404);
-    if (!isAdmin && property.status !== "active") {
+    // Inactive properties are visible only to whoever manages them.
+    const canManage = isSuperAdmin(req.user) || (isStaff(req.user) && property.ownerId === req.user.id);
+    if (property.status !== "active" && !canManage) {
       throw new ApiError("Property not found.", 404);
     }
 
@@ -118,6 +141,7 @@ export async function createProperty(req, res, next) {
         priceTaxRate: body.price.taxRate,
         thumbnailUrl: thumbnail?.url ?? null,
         gallery: gallery.map((g) => g.url),
+        ownerId: await resolveOwnerId(req.user, body.ownerId),
       },
     });
 
@@ -133,8 +157,7 @@ export async function createProperty(req, res, next) {
 
 export async function updateProperty(req, res, next) {
   try {
-    const existing = await prisma.property.findUnique({ where: { id: req.params.id } });
-    if (!existing) throw new ApiError("Property not found.", 404);
+    const existing = await findManagedProperty(req.user, req.params.id);
 
     const flat = unflatten(req.body);
     const partialSchema = propertySchema.partial();
@@ -150,6 +173,9 @@ export async function updateProperty(req, res, next) {
     if (body.bathrooms !== undefined) data.bathrooms = body.bathrooms;
     if (body.status !== undefined) data.status = body.status;
     if (req.body.amenities !== undefined) data.amenities = toArray(req.body.amenities);
+    if (isSuperAdmin(req.user) && body.ownerId !== undefined) {
+      data.ownerId = await resolveOwnerId(req.user, body.ownerId);
+    }
 
     if (body.location) {
       if (body.location.address !== undefined) data.locationAddress = body.location.address;
@@ -193,8 +219,7 @@ export async function updateProperty(req, res, next) {
 
 export async function removeProperty(req, res, next) {
   try {
-    const property = await prisma.property.findUnique({ where: { id: req.params.id } });
-    if (!property) throw new ApiError("Property not found.", 404);
+    const property = await findManagedProperty(req.user, req.params.id);
 
     await prisma.property.delete({ where: { id: req.params.id } });
 
@@ -267,6 +292,7 @@ export async function pricingPreview(req, res, next) {
 
 export async function checkAvailability(req, res, next) {
   try {
+    await findManagedProperty(req.user, req.params.id);
     const { checkIn, checkOut } = req.query;
     if (!checkIn || !checkOut) throw new ApiError("checkIn and checkOut are required.", 400);
 

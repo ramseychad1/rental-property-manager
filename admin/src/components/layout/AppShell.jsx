@@ -6,10 +6,12 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Sparkles } from "lucide-react";
 import { vertical } from "@/config/vertical";
 import { navConfig } from "@/config/nav";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 
 export default function AppShell() {
+  const { isSuperAdmin } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -30,7 +32,7 @@ export default function AppShell() {
             </div>
           </div>
           <nav className="py-3 px-3 space-y-0.5">
-            {navConfig.map((item) => (
+            {navConfig.filter((item) => isSuperAdmin || !item.superAdminOnly).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

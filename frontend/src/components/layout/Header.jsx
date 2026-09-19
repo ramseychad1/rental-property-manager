@@ -104,10 +104,10 @@ export default function Header() {
             <Image
               src="/logo.png"
               alt="Logo"
-              width={150}
-              height={100}
+              width={440}
+              height={289}
               priority
-              style={{ width: "auto", height: "auto" }}
+              className="h-16 w-auto"
             />
           </Link>
 
@@ -248,9 +248,9 @@ export default function Header() {
               <Image
                 src="/logo.png"
                 alt="Logo"
-                width={120}
-                height={80}
-                style={{ width: "auto", height: "40px" }}
+                width={440}
+                height={289}
+                className="h-12 w-auto"
               />
             </Link>
             <button

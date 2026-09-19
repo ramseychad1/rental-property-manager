@@ -36,7 +36,7 @@ const passwordSchema = z
   });
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refresh } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -110,6 +110,7 @@ export default function SettingsPage() {
       await authApi.updatePassword({ oldPassword, newPassword });
       toast.success("Password updated");
       password.reset();
+      if (user?.mustChangePassword) await refresh();
     } catch (e) {
       toast.error(e?.normalizedMessage || "Failed to update password");
     } finally {
@@ -124,6 +125,13 @@ export default function SettingsPage() {
         subtitle="Manage your profile, security, and workspace preferences."
       />
 
+      {user?.mustChangePassword && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
+          <strong>Set your own password to continue.</strong> You signed in with a
+          temporary password. Enter it as the current password below, then choose a new one.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Profile */}
         <Card className="p-6 rounded-xl space-y-5">
@@ -134,9 +142,9 @@ export default function SettingsPage() {
                 Personal details
               </h3>
             </div>
-            {user?.role === "Admin" && (
+            {(user?.role === "SuperAdmin" || user?.role === "Owner") && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-foreground text-background">
-                <ShieldCheck className="w-3 h-3" /> Admin
+                <ShieldCheck className="w-3 h-3" /> {user.role === "SuperAdmin" ? "Super Admin" : "Owner"}
               </span>
             )}
           </div>

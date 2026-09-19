@@ -203,6 +203,23 @@ export const usersApi = {
     return data?.data || [];
   },
 
+  // SuperAdmin user management. create/resetPassword return
+  // { user, credentials: { loginUrl, email, tempPassword } } - shown once.
+  create: async (body) => {
+    const { data } = await http.post("/user", body);
+    return data?.data;
+  },
+
+  update: async (userId, body) => {
+    const { data } = await http.patch(`/user/${userId}`, body);
+    return data?.data;
+  },
+
+  resetPassword: async (userId) => {
+    const { data } = await http.post(`/user/${userId}/reset-password`);
+    return data?.data;
+  },
+
   getUserBookings: async (userId, params = {}) => {
     const { data } = await http.get(`/user/${userId}/bookings`, { params });
     return data?.data || { bookings: [], pagination: {} };

@@ -17,7 +17,7 @@ async function upsertUser({ name, email, password, role }) {
 }
 
 async function main() {
-  await upsertUser({ name: "Ops Admin", email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: "Admin" });
+  await upsertUser({ name: "Platform Admin", email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: "SuperAdmin" });
 
   console.log("\nSeed complete.");
   console.log(`Admin login:  ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}\n`);

@@ -85,6 +85,7 @@ export async function login(req, res, next) {
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new ApiError("Invalid email or password.", 401);
+    if (!user.isActive) throw new ApiError("This account has been deactivated.", 403);
 
     setSession(res, user);
     return ok(res, serializeUser(user), "Login successful");
@@ -123,7 +124,7 @@ export async function resetPassword(req, res, next) {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.update({
       where: { email: email.toLowerCase() },
-      data: { passwordHash },
+      data: { passwordHash, mustChangePassword: false },
     });
 
     return ok(res, serializeUser(user), "Password reset successfully");

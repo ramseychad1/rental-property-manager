@@ -392,9 +392,9 @@ function AccountSection() {
           <Image
             src="/logo.png"
             alt="Logo"
-            width={145}
-            height={70}
-            className="object-contain"
+            width={440}
+            height={289}
+            className="h-20 w-auto object-contain"
             priority
           />
         </div>

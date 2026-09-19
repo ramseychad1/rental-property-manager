@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeSeason } from "../lib/serialize.js";
+import { findManagedProperty } from "../lib/access.js";
 
 const seasonSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -32,8 +33,7 @@ export async function createSeason(req, res, next) {
   try {
     const body = seasonSchema.parse(req.body);
 
-    const property = await prisma.property.findUnique({ where: { id: req.params.propertyId } });
-    if (!property) throw new ApiError("Property not found.", 404);
+    await findManagedProperty(req.user, req.params.propertyId);
 
     const season = await prisma.season.create({
       data: {
@@ -57,6 +57,7 @@ export async function createSeason(req, res, next) {
 export async function updateSeason(req, res, next) {
   try {
     const body = seasonSchema.partial().parse(req.body);
+    await findManagedProperty(req.user, req.params.propertyId);
 
     const existing = await prisma.season.findFirst({
       where: { id: req.params.seasonId, propertyId: req.params.propertyId },
@@ -80,6 +81,7 @@ export async function updateSeason(req, res, next) {
 
 export async function removeSeason(req, res, next) {
   try {
+    await findManagedProperty(req.user, req.params.propertyId);
     const existing = await prisma.season.findFirst({
       where: { id: req.params.seasonId, propertyId: req.params.propertyId },
     });

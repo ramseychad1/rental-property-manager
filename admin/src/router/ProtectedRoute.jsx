@@ -22,11 +22,22 @@ export default function ProtectedRoute({ children }) {
 }
 
 export function AdminRoute({ children }) {
-  const { isAuthenticated, isAdmin, bootstrapping } = useAuth();
+  const { user, isAuthenticated, isAdmin, bootstrapping } = useAuth();
   const location = useLocation();
   if (bootstrapping) return <FullScreenLoader />;
   if (!isAuthenticated)
     return <Navigate to="/login" state={{ from: location }} replace />;
   if (!isAdmin) return <Navigate to="/login" replace />;
+  // Accounts with a temporary password can only reach Settings (the API
+  // enforces this too) until they've set their own.
+  if (user?.mustChangePassword && location.pathname !== "/settings")
+    return <Navigate to="/settings" replace />;
+  return children;
+}
+
+/** Platform-operator-only screens (Site Content, Users, ...). */
+export function SuperAdminRoute({ children }) {
+  const { isSuperAdmin } = useAuth();
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
   return children;
 }

@@ -12,6 +12,7 @@ const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
   isAdmin: false,
+  isSuperAdmin: false,
   bootstrapping: true,
   login: async () => {},
   logout: async () => {},
@@ -46,10 +47,10 @@ export function AuthProvider({ children }) {
     // After login, fetch /user/ to get fresh shape (or use returned data in mock)
     const me = (await authApi.me()) || res?.data;
     if (!me) throw new Error("Login failed.");
-    if (me.role !== "Admin") {
-      // Strict admin-only — sign out non-admins
+    if (me.role !== "SuperAdmin" && me.role !== "Owner") {
+      // Staff-only — sign out guests
       await authApi.logout().catch(() => {});
-      throw new Error("This console is restricted to admin accounts.");
+      throw new Error("This console is restricted to staff accounts.");
     }
     setUser(me);
     return me;
@@ -72,7 +73,9 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: !!user,
-      isAdmin: user?.role === "Admin",
+      // isAdmin = any staff role (SuperAdmin or Owner); isSuperAdmin = platform operator only.
+      isAdmin: user?.role === "SuperAdmin" || user?.role === "Owner",
+      isSuperAdmin: user?.role === "SuperAdmin",
       bootstrapping,
       login,
       logout,

@@ -18,6 +18,8 @@ export function serializeUser(u) {
     picture: u.picture ?? null,
     role: u.role,
     isVerified: u.isVerified,
+    isActive: u.isActive,
+    mustChangePassword: u.mustChangePassword,
     createdAt: u.createdAt,
   };
 }
@@ -29,6 +31,7 @@ export function serializeProperty(p) {
     title: p.title,
     description: p.description ?? "",
     status: p.status,
+    ownerId: p.ownerId ?? null,
     minNights: p.minNights,
     maxNights: p.maxNights ?? null,
     guests: p.guests,

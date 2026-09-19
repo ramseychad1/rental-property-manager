@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, ShieldCheck, Users } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, KeyRound, Loader2, Plus, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
 import DataToolbar, { SearchInput } from "@/components/common/DataToolbar";
@@ -39,6 +40,13 @@ import { queryKeys } from "@/lib/queryClient";
 import { fmtDate } from "@/lib/formatters";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import UserBookings from "./UserBookings";
+import AddUserDialog from "./AddUserDialog";
+import CredentialsDialog from "./CredentialsDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { useAuth } from "@/contexts/AuthContext";
+
+const STAFF = ["SuperAdmin", "Owner"];
+const ROLE_LABEL = { SuperAdmin: "Super Admin", Owner: "Owner", Guest: "Guest" };
 
 const LIMIT = 10;
 
@@ -49,6 +57,45 @@ export default function UserListPage() {
   const [page, setPage] = useState(1);
 
   const debouncedSearch = useDebouncedValue(search);
+  const { user: me } = useAuth();
+  const queryClient = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [creds, setCreds] = useState(null); // { credentials, name, reset }
+  const [busy, setBusy] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const refreshUsers = () => {
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+    queryClient.invalidateQueries({ queryKey: ["owners"] });
+  };
+
+  const setActiveFlag = async (u, isActive) => {
+    setBusy(true);
+    try {
+      const updated = await usersApi.update(u.id, { isActive });
+      setActive(updated);
+      refreshUsers();
+      toast.success(isActive ? "User reactivated" : "User deactivated");
+    } catch (err) {
+      toast.error(err.normalizedMessage || "Could not update user");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPassword = async (u) => {
+    setConfirmReset(false);
+    setBusy(true);
+    try {
+      const result = await usersApi.resetPassword(u.id);
+      setCreds({ credentials: result.credentials, name: u.name, reset: true });
+      refreshUsers();
+    } catch (err) {
+      toast.error(err.normalizedMessage || "Could not reset password");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const userParams = useMemo(
     () => ({
@@ -79,7 +126,12 @@ export default function UserListPage() {
     <div className="space-y-6">
       <PageHeader
         title="Users"
-        subtitle={`${totalCount} accounts across guests, hosts, and admins.`}
+        subtitle={`${totalCount} accounts across guests, owners, and super admins.`}
+        actions={
+          <Button onClick={() => setAddOpen(true)} data-testid="add-user-btn">
+            <Plus className="w-4 h-4" /> Add user
+          </Button>
+        }
       />
 
       <DataToolbar>
@@ -100,8 +152,9 @@ export default function UserListPage() {
 
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
-            <SelectItem value="Admin">Admin</SelectItem>
-            <SelectItem value="User">User</SelectItem>
+            <SelectItem value="SuperAdmin">Super Admin</SelectItem>
+            <SelectItem value="Owner">Owner</SelectItem>
+            <SelectItem value="User">Guest</SelectItem>
           </SelectContent>
         </Select>
       </DataToolbar>
@@ -168,14 +221,19 @@ export default function UserListPage() {
 
                   <TableCell>
                     <Badge
-                      variant={u.role === "Admin" ? "default" : "outline"}
+                      variant={STAFF.includes(u.role) ? "default" : "outline"}
                       className="text-xs gap-1"
                     >
-                      {u.role === "Admin" && (
+                      {u.role === "SuperAdmin" && (
                         <ShieldCheck className="w-3 h-3" />
                       )}
-                      {u.role}
+                      {ROLE_LABEL[u.role] || u.role}
                     </Badge>
+                    {u.isActive === false && (
+                      <Badge variant="outline" className="ml-1 text-xs text-destructive border-destructive/40">
+                        Deactivated
+                      </Badge>
+                    )}
                   </TableCell>
 
                   <TableCell>
@@ -242,15 +300,13 @@ export default function UserListPage() {
 
                     <div className="mt-2 flex items-center gap-2">
                       <Badge
-                        variant={
-                          active.role === "Admin" ? "default" : "outline"
-                        }
+                        variant={STAFF.includes(active.role) ? "default" : "outline"}
                         className="gap-1"
                       >
-                        {active.role === "Admin" && (
+                        {active.role === "SuperAdmin" && (
                           <ShieldCheck className="w-3 h-3" />
                         )}
-                        {active.role}
+                        {ROLE_LABEL[active.role] || active.role}
                       </Badge>
                     </div>
                   </div>
@@ -271,6 +327,33 @@ export default function UserListPage() {
                 </div>
               </Card>
 
+              {STAFF.includes(active.role) && (
+                <Card className="mt-3 p-5 rounded-xl space-y-3">
+                  <div className="overline">Manage account</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" disabled={busy}
+                      onClick={() => setConfirmReset(true)} data-testid="user-reset-password">
+                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                      Reset password
+                    </Button>
+                    {active.id !== me?.id && (
+                      <Button size="sm" variant="outline" disabled={busy}
+                        onClick={() => setActiveFlag(active, active.isActive === false)}
+                        data-testid="user-toggle-active">
+                        {active.isActive === false
+                          ? <><UserCheck className="w-4 h-4" /> Reactivate</>
+                          : <><UserX className="w-4 h-4" /> Deactivate</>}
+                      </Button>
+                    )}
+                  </div>
+                  {active.mustChangePassword && (
+                    <p className="text-xs text-muted-foreground">
+                      Hasn't set their own password yet (still on the temporary one).
+                    </p>
+                  )}
+                </Card>
+              )}
+
               <div className="mt-3">
                 <UserBookings userId={active._id} />
               </div>
@@ -278,6 +361,31 @@ export default function UserListPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      <AddUserDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={(result) => {
+          setAddOpen(false);
+          setCreds({ credentials: result.credentials, name: result.user.name, reset: false });
+          refreshUsers();
+        }}
+      />
+      <CredentialsDialog
+        open={!!creds}
+        onOpenChange={(v) => !v && setCreds(null)}
+        credentials={creds?.credentials}
+        name={creds?.name}
+        reset={creds?.reset}
+      />
+      <ConfirmDialog
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title="Reset password?"
+        description={`${active?.name || "This user"}'s current password stops working immediately. You'll get a new temporary password to send them, and they'll set their own at next sign-in.`}
+        confirmLabel="Reset password"
+        onConfirm={() => resetPassword(active)}
+      />
     </div>
   );
 }

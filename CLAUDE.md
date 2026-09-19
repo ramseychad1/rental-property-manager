@@ -24,9 +24,10 @@ The backend is expected at `http://localhost:8001/api` in local dev.
 
 Not yet set up in the new `rental-property` workspace as of this rebuild — follow the "Deploying (Railway)" section below to stand up `staging` from scratch. Update this section with the actual URLs once it's live.
 
-Demo logins (seeded by `prisma/seed.js`):
+Admin login (seeded by `prisma/seed.js`):
 - Admin: `admin@rentalpropertymanager.com` / `Admin123!`
-- Guest: `guest@rentalpropertymanager.com` / `Guest123!`
+
+No demo guest account or placeholder properties are seeded — this is a genuinely clean start, add real properties through the admin panel.
 
 Image uploads need a Railway Bucket wired into the backend service via variable references (`BUCKET`/`ACCESS_KEY_ID`/`SECRET_ACCESS_KEY`/`ENDPOINT`/`REGION` = `${{<bucket-name>.VARNAME}}`) — see the storage/media notes under the backend architecture section below for why direct bucket URLs don't work and what's proxying them. `backend/scripts/migrate-bucket.js` exists for copying every object between two Railway Buckets by key (list → download → re-upload), in case this project ever needs to move workspaces again.
 
@@ -61,7 +62,7 @@ docker compose up -d         # local Postgres on localhost:5434 (see docker-comp
 cp .env.example .env          # then set JWT_SECRET to a real random value
 npm install
 npx prisma migrate dev        # applies schema, generates client
-node prisma/seed.js           # admin@rentalpropertymanager.com / Admin123!, guest@rentalpropertymanager.com / Guest123!, 3 demo properties
+node prisma/seed.js           # admin@rentalpropertymanager.com / Admin123! - no demo guest or properties
 npm run dev                   # node --watch src/server.js, serves http://localhost:8001/api
 ```
 No test script is defined. `npm run lint` runs eslint.

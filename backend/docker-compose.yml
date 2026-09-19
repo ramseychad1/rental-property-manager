@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rpm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rpm
+      POSTGRES_PASSWORD: rpm
+      POSTGRES_DB: rpm
+    ports:
+      - "5434:5432"
+    volumes:
+      - rpm_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rpm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rpm_pgdata:

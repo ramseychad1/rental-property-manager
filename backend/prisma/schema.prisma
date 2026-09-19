@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  Guest
+  Admin
+}
+
+enum PropertyStatus {
+  active
+  inactive
+  draft
+}
+
+enum BookingStatus {
+  pending
+  accepted
+  rejected
+  booked
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+}
+
+enum VerificationPurpose {
+  SIGNUP
+  PASSWORD_RESET
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  picture      String?
+  role         UserRole  @default(Guest)
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bookings     Booking[]
+}
+
+model VerificationCode {
+  id         String              @id @default(cuid())
+  email      String
+  code       String
+  purpose    VerificationPurpose
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime            @default(now())
+
+  @@index([email, purpose])
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  status      PropertyStatus @default(active)
+
+  minNights Int @default(2)
+  maxNights Int?
+  guests    Int @default(2)
+  bedrooms  Int @default(1)
+  bathrooms Int @default(1)
+  rating    Float @default(4.9)
+
+  amenities String[]
+
+  locationAddress String?
+  locationCity    String?
+  locationCountry String?
+  locationZipCode String?
+  locationUrl     String?
+
+  priceNightly     Int    @default(0)
+  priceCurrency    String @default("USD")
+  priceCleaningFee Int    @default(0)
+  priceServiceFee  Int    @default(0)
+  priceTaxRate     Int    @default(0)
+
+  thumbnailUrl String?
+  gallery      String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seasons  Season[]
+  bookings Booking[]
+}
+
+model Season {
+  id            String   @id @default(cuid())
+  propertyId    String
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name          String
+  pricePerNight Int
+  dateRanges    Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([propertyId])
+}
+
+model Booking {
+  id        String @id @default(cuid())
+  bookingId String @unique
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+
+  checkIn     DateTime
+  checkOut    DateTime
+  adults      Int      @default(1)
+  children    Int      @default(0)
+  infants     Int      @default(0)
+  guests      Int      @default(1)
+  totalNights Int
+
+  guestName  String
+  guestEmail String
+  guestPhone String?
+  notes      String?
+
+  pricing     Json
+  totalAmount Int
+
+  bookingStatus      BookingStatus @default(pending)
+  paymentStatus      PaymentStatus @default(pending)
+  cancelledBy        String?
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([userId])
+}

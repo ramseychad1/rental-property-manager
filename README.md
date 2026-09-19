@@ -18,15 +18,15 @@ The backend is built on **Express + Prisma + PostgreSQL**. It implements the ful
 
 This is a single-tenant build. Multi-tenancy (one deployment serving multiple property owners, each scoped to their own listings) is a planned follow-up, not yet implemented.
 
-**Live staging deployment**: not yet set up in the current Railway workspace — see `CLAUDE.md` for the deploy playbook. Update this table once it's live.
+**Live deployment** (Railway workspace `rental-property`, project `rental-property-manager`):
 
 | App | URL |
 |---|---|
-| Public website | _pending_ |
-| Admin console | _pending_ |
-| Backend API | _pending_ |
+| Public website | https://frontend-production-c0d1.up.railway.app |
+| Admin console | https://admin-production-bbad.up.railway.app |
+| Backend API | https://backend-production-933a.up.railway.app |
 
-Admin login (seeded, same locally and on staging):
+Admin login (seeded, same locally and in production):
 - Admin — `admin@rentalpropertymanager.com` / `Admin123!`
 
 No demo guest account or placeholder properties — real properties get added through the admin panel.

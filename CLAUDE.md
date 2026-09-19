@@ -22,14 +22,20 @@ The backend is expected at `http://localhost:8001/api` in local dev.
 
 ## Deployed environments (Railway)
 
-Not yet set up in the new `rental-property` workspace as of this rebuild — follow the "Deploying (Railway)" section below to stand up `staging` from scratch. Update this section with the actual URLs once it's live.
+Workspace `rental-property`, project `rental-property-manager`. Unlike the prior POC, this one runs a single Railway environment named `production` (no `staging`/`production` split) — all three apps live there, along with a `Postgres` service and a `rpm-uploads` Bucket:
+
+| App | URL |
+|---|---|
+| Public website | https://frontend-production-c0d1.up.railway.app |
+| Admin console | https://admin-production-bbad.up.railway.app |
+| Backend API | https://backend-production-933a.up.railway.app (health: `/api/health`) |
 
 Admin login (seeded by `prisma/seed.js`):
 - Admin: `admin@rentalpropertymanager.com` / `Admin123!`
 
 No demo guest account or placeholder properties are seeded — this is a genuinely clean start, add real properties through the admin panel.
 
-Image uploads need a Railway Bucket wired into the backend service via variable references (`BUCKET`/`ACCESS_KEY_ID`/`SECRET_ACCESS_KEY`/`ENDPOINT`/`REGION` = `${{<bucket-name>.VARNAME}}`) — see the storage/media notes under the backend architecture section below for why direct bucket URLs don't work and what's proxying them. `backend/scripts/migrate-bucket.js` exists for copying every object between two Railway Buckets by key (list → download → re-upload), in case this project ever needs to move workspaces again.
+Image uploads go through the `rpm-uploads` Railway Bucket, wired into the backend service via variable references (`BUCKET`/`ACCESS_KEY_ID`/`SECRET_ACCESS_KEY`/`ENDPOINT`/`REGION` = `${{rpm-uploads.VARNAME}}`) — see the storage/media notes under the backend architecture section below for why direct bucket URLs don't work and what's proxying them. `backend/scripts/migrate-bucket.js` exists for copying every object between two Railway Buckets by key (list → download → re-upload), in case this project ever needs to move workspaces again.
 
 ## Commands
 
@@ -116,6 +122,8 @@ Prisma's CLI refuses to run `migrate reset` (or other destructor commands) when 
 - **`Dockerfile`'s `COPY` paths must be relative to `backend/` itself (`COPY . .`), not the repo root.** This contradicts Railway's documented "build context is always the repo root" behavior — empirically, for a service where both `rootDirectory` and `dockerfilePath` point at the same subdirectory, the effective Docker build context is scoped to that subdirectory instead. Confirmed the hard way on the prior repo: `COPY backend/ .` failed on Railway with `"/backend": not found` even though the identical Dockerfile built fine locally with the repo root as context. If you touch this Dockerfile, verify locally with `backend` itself as the build context (`cd backend && docker build -f Dockerfile .`), not the repo root.
 - Migrations run as Railway's **pre-deploy command** (`npx prisma migrate deploy`), configured on the service, not baked into the Dockerfile's `CMD` — the container's `CMD` only starts the server. **`preDeployCommand` is a single string, not shell-chained** — `"npx prisma migrate deploy && node prisma/seed.js"` silently only runs the first command. If you need to chain commands there, wrap it yourself: `"sh -c \"cmd1 && cmd2\""`.
 - Railway **dedupes deploy triggers against the same commit hash** — calling `redeploy` or `connect-service-source` again for a commit that already has a deployment (even a failed/removed one) can silently return `SKIPPED` rather than actually rebuilding with current service config. If a config-only change (env var, `preDeployCommand`, etc.) isn't taking effect, a trivial version-bump commit reliably forces a genuine fresh build when nothing else does.
+- The Railway MCP's `redeploy` tool ("re-run the most recent deployment... reusing that deployment's existing build") reuses that deployment's **entire config snapshot, including `preDeployCommand`** — not the service's current config. Confirmed by updating `preDeployCommand` to chain in `node prisma/seed.js`, calling `redeploy`, and watching only the old plain `migrate deploy` command run. A genuinely fresh commit (even a trivial one) is what actually picks up a config change; `redeploy` alone does not.
+- The prior POC's lesson that Railway's CLI silently drops `builder`/`rootDirectory` changes does **not** apply to the Railway MCP's `update-service`/`connect-service-source` tools — used directly on this rebuild, they set `rootDirectory`, `dockerfilePath` (which auto-switched `builder` to `DOCKERFILE`), `preDeployCommand`, `healthcheckPath`, and `watchPatterns` correctly on the first try, confirmed by reading them back with `get-service-config` afterward. Still worth the read-back check, but the MCP tools are more trustworthy here than the CLI was.
 - `mcp__railway__create-tcp-proxy` (to expose a database's port publicly) gets blocked by the local safety classifier even for temporary/POC use — don't rely on it to reach a Railway-internal database from a local machine. Route one-off scripts through the service's own `preDeployCommand` instead (stays on Railway's private network) — or, for buckets specifically, just connect directly: Railway Buckets are only accessible via public networking anyway, so `migrate-bucket.js` needs no special routing.
 - Project-level "Transfer Project" between workspaces is blocked while the project has a live Bucket, **and stays blocked for 52 hours after you delete one** (Railway's bucket-recovery hold window) — deleting the bucket doesn't unblock the transfer immediately. Plan around the wait if a workspace move is ever needed again.
 

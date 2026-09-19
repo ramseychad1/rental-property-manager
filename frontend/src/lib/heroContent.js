@@ -6,7 +6,7 @@ import {
 
 export const PROPERTY_HERO_CONTENT = [
   {
-    eyebrow: "Welcome to Powell Properties",
+    eyebrow: "Welcome to Rental Property Manager",
     headline: ["DOCK OUT BACK.", "SAND BAR UP AHEAD"],
     script: "Unwind. Explore. Repeat",
     body: "Your private waterfront escape in the heart of Surfside Beach, SC.",

@@ -57,7 +57,7 @@ export default function LoginPage() {
       {/* Background Image */}
       <img
         src="/login-page.png"
-        alt="Luxury Property"
+        alt="Rental Property Manager"
         className="absolute inset-0 w-full h-full object-cover"
       />
 

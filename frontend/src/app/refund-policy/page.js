@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Refund Policy | Powell Properties",
-  description: "Refund and cancellation policy for Powell Properties vacation stays.",
+  title: "Refund Policy | Rental Property Manager",
+  description: "Refund and cancellation policy for Rental Property Manager vacation stays.",
 };
 
 const sections = [

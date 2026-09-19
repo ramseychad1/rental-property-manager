@@ -21,12 +21,12 @@ export async function generateMetadata({ params }) {
 
   if (!blog) {
     return {
-      title: "Blog Not Found | Powell Properties",
+      title: "Blog Not Found | Rental Property Manager",
     };
   }
 
   return {
-    title: `${blog.title} | Powell Properties`,
+    title: `${blog.title} | Rental Property Manager`,
     description: blog.shortDescription,
     openGraph: {
       title: blog.title,

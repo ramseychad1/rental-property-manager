@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Privacy Policy | Powell Properties",
-  description: "Privacy policy for Powell Properties vacation rental guests.",
+  title: "Privacy Policy | Rental Property Manager",
+  description: "Privacy policy for Rental Property Manager vacation rental guests.",
 };
 
 const sections = [

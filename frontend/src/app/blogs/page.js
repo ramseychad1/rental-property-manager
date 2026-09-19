@@ -6,7 +6,7 @@ import { api } from "@/services/api";
 export const revalidate = 300;
 
 export const metadata = {
-  title: "Surfside Beach, SC Travel Blog | Powell Properties",
+  title: "Surfside Beach, SC Travel Blog | Rental Property Manager",
   description:
     "Travel notes, local tips, and stay-planning ideas for Surfside Beach, SC vacation guests.",
 };

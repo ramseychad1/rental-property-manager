@@ -2,9 +2,9 @@ import { rateCards } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata = {
-  title: "Seasonal Rates | Powell Properties",
+  title: "Seasonal Rates | Rental Property Manager",
   description:
-    "Review seasonal nightly rate ranges and minimum stays for Powell Properties Surfside Beach, SC vacation rentals.",
+    "Review seasonal nightly rate ranges and minimum stays for Rental Property Manager Surfside Beach, SC vacation rentals.",
 };
 
 export default function RatePage() {

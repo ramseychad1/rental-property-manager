@@ -30,7 +30,7 @@ export const metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "https://rentalpropertymanager.com",
   ),
   title: {
-    default: "Powell Properties - Surfside Beach Rentals",
+    default: "Rental Property Manager - Surfside Beach Rentals",
     template: "%s",
   },
   description:
@@ -39,12 +39,12 @@ export const metadata = {
     "Surfside Beach, SC vacation rentals",
     "Key Largo rentals",
     "dockside vacation homes",
-    "Powell Properties",
+    "Rental Property Manager",
   ],
   openGraph: {
     type: "website",
-    siteName: "Powell Properties",
-    title: "Powell Properties - Surfside Beach Rentals",
+    siteName: "Rental Property Manager",
+    title: "Rental Property Manager - Surfside Beach Rentals",
     description:
       "Handpicked, dockside vacation homes in Surfside Beach, SC with concierge support.",
     images: ["/images/hero-bg.png"],

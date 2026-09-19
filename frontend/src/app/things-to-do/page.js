@@ -3,9 +3,9 @@ import { thingsToDoData } from "@/data/thingsToDo";
 import ThingsToDoExplorer from "@/components/things-to-do/ThingsToDoExplorer";
 
 export const metadata = {
-  title: "Things To Do in Surfside Beach, SC | Powell Properties",
+  title: "Things To Do in Surfside Beach, SC | Rental Property Manager",
   description:
-    "Explore restaurants, fishing, bird watching, and local Surfside Beach, SC favorites near Powell Properties vacation rentals.",
+    "Explore restaurants, fishing, bird watching, and local Surfside Beach, SC favorites near Rental Property Manager vacation rentals.",
 };
 
 function groupThingsToDo(items) {

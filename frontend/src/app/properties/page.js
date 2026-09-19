@@ -3,7 +3,7 @@ import PropertyCard from "@/components/property/PropertyCard";
 import { api } from "@/services/api";
 
 export const metadata = {
-  title: "Surfside Beach, SC Vacation Rentals | Powell Properties",
+  title: "Surfside Beach, SC Vacation Rentals | Rental Property Manager",
   description:
     "Browse handpicked Surfside Beach, SC vacation homes with private docks, ocean access, and local concierge support.",
 };

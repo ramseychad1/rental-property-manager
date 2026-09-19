@@ -2,7 +2,7 @@ import ServicesList from "@/components/services/ServicesList";
 import { servicesData } from "@/data/services";
 
 export const metadata = {
-  title: "Vacation Concierge Services | Powell Properties",
+  title: "Vacation Concierge Services | Rental Property Manager",
   description:
     "Add private fishing, chef, and concierge services to your Surfside Beach, SC vacation rental stay.",
 };

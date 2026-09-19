@@ -27,12 +27,12 @@ export async function generateMetadata({ params }) {
 
   if (!property) {
     return {
-      title: "Property Not Found | Powell Properties",
+      title: "Property Not Found | Rental Property Manager",
     };
   }
 
   return {
-    title: `${property.title} | Powell Properties`,
+    title: `${property.title} | Rental Property Manager`,
     description: property.description,
     openGraph: {
       title: property.title,

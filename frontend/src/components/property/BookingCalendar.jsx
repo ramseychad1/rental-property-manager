@@ -500,7 +500,7 @@ export default function BookingCalendar({
 
     // Some seasons only allow one arrival weekday; say so up front.
     const arrivalDays = [
-      ...new Set(seasons.map((s) => s.checkInDay).filter((d) => d != null)),
+      ...new Set((seasons ?? []).map((s) => s.checkInDay).filter((d) => d != null)),
     ];
     if (arrivalDays.length > 0) {
       return `Select your check-in date · some seasons allow ${arrivalDays

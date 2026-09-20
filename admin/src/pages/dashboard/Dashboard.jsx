@@ -174,7 +174,7 @@ export default function DashboardPage() {
           label="Total Users"
           value={loading ? "-" : fmtNumber(summary.totalUsers)}
           icon={UsersIcon}
-          hint="Registered accounts"
+          hint="Registered guests"
         />
         <KpiCard
           testid="kpi-revenue"

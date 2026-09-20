@@ -340,10 +340,8 @@ export async function analytics(req, res, next) {
     const [totalProperties, activeProperties, totalUsers, bookingsInRange] = await Promise.all([
       prisma.property.count({ where: propScope }),
       prisma.property.count({ where: { ...propScope, status: "active" } }),
-      // Owners see how many distinct guests have booked their properties.
-      isSuperAdmin(req.user)
-        ? prisma.user.count()
-        : prisma.booking.findMany({ where: bookingScope(req.user), distinct: ["userId"], select: { userId: true } }).then((r) => r.length),
+      // Registered guests only - staff accounts (owners, super admins) aren't customers.
+      prisma.user.count({ where: { role: "Guest" } }),
       prisma.booking.findMany({
         where: { ...bookingScope(req.user), createdAt: { gte: start, lt: end } },
         include: { property: true, user: true },

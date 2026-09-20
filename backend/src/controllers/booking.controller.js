@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeBooking } from "../lib/serialize.js";
+import { notifyBookingCreated, notifyBookingEvent } from "../lib/notifications.js";
 import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, bookingScope } from "../lib/access.js";
 
@@ -153,6 +154,8 @@ export async function createBooking(req, res, next) {
       include: { property: true, user: true },
     });
 
+    void notifyBookingCreated(booking);
+
     return res.status(201).json({
       success: true,
       message: "Booking confirmed",
@@ -230,7 +233,7 @@ export async function getBooking(req, res, next) {
   }
 }
 
-async function transition(req, res, next, data, message) {
+async function transition(req, res, next, data, message, event) {
   try {
     const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
     if (!existing) throw new ApiError("Booking not found.", 404);
@@ -241,6 +244,8 @@ async function transition(req, res, next, data, message) {
       include: { property: true, user: true },
     });
 
+    void notifyBookingEvent(event, booking);
+
     return ok(res, serializeBooking(booking), message);
   } catch (err) {
     next(err);
@@ -248,10 +253,10 @@ async function transition(req, res, next, data, message) {
 }
 
 export const acceptBooking = (req, res, next) =>
-  transition(req, res, next, { bookingStatus: "accepted" }, "Booking accepted");
+  transition(req, res, next, { bookingStatus: "accepted" }, "Booking accepted", "accepted");
 
 export const rejectBooking = (req, res, next) =>
-  transition(req, res, next, { bookingStatus: "rejected" }, "Booking rejected");
+  transition(req, res, next, { bookingStatus: "rejected" }, "Booking rejected", "rejected");
 
 export async function cancelBooking(req, res, next) {
   const schema = z.object({
@@ -265,6 +270,7 @@ export async function cancelBooking(req, res, next) {
     next,
     { bookingStatus: "cancelled", cancelledBy: body.cancelledBy, cancellationReason: body.cancellationReason },
     "Booking cancelled",
+    "cancelled",
   );
 }
 
@@ -289,6 +295,10 @@ export async function setPaymentStatus(req, res, next) {
       data,
       include: { property: true, user: true },
     });
+
+    if (paymentStatus === "paid" || paymentStatus === "refunded") {
+      void notifyBookingEvent(paymentStatus, booking);
+    }
 
     return ok(res, serializeBooking(booking), "Payment status updated");
   } catch (err) {

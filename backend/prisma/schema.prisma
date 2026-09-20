@@ -56,6 +56,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   bookings     Booking[]
   ownedProperties Property[]
+  emailConnection EmailConnection?
 }
 
 model VerificationCode {
@@ -196,4 +197,36 @@ model SiteContent {
   updatedAt DateTime @updatedAt
 
   @@unique([siteId, section])
+}
+
+// A user's connected Gmail account, used to send email as them through the
+// Gmail API. SuperAdmin connections (isSystem) also act as the platform's
+// "system sender" for signup codes, contact form and owners who haven't
+// connected their own. refreshTokenEnc is AES-256-GCM (see src/lib/crypto.js).
+model EmailConnection {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email           String
+  refreshTokenEnc String
+  status          String   @default("active") // "active" | "needs_reconnect"
+  lastError       String?
+  isSystem        Boolean  @default(false)
+  connectedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// One row per send attempt. Bodies are deliberately not stored (guest PII).
+model EmailLog {
+  id           String   @id @default(cuid())
+  kind         String
+  toEmail      String
+  subject      String
+  status       String // "sent" | "failed" | "skipped"
+  error        String?
+  connectionId String?
+  bookingId    String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
 }

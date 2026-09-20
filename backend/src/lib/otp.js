@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import { prisma } from "./prisma.js";
+import { ApiError } from "./response.js";
+import { notifyOtp } from "./notifications.js";
 
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -11,11 +13,12 @@ export async function issueCode(email, purpose) {
     data: { email: email.toLowerCase(), code, purpose, expiresAt },
   });
 
-  // No email provider wired up for this POC - the code goes to the backend's
-  // own console so signup/reset can be tested without configuring one.
-  console.log(
-    `\n[OTP] ${purpose} code for ${email}: ${code} (expires in 10 min)\n`,
-  );
+  // Sent through the system Gmail sender. With no sender connected the mailer
+  // logs the message (including the code) to the console instead, so dev works.
+  const result = await notifyOtp(email, purpose, code);
+  if (result?.status === "failed") {
+    throw new ApiError("We couldn't send the email right now. Please try again shortly.", 502);
+  }
 
   return code;
 }

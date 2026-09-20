@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { authApi } from "@/lib/api";
 import { toast } from "sonner";
+import EmailCard from "./EmailCard";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Required"),
@@ -272,6 +273,9 @@ export default function SettingsPage() {
             </Button>
           </form>
         </Card>
+
+        {/* Email (Gmail connection) */}
+        <EmailCard />
 
         {/* Theme */}
         <Card className="p-6 rounded-xl space-y-5">

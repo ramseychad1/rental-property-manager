@@ -316,6 +316,27 @@ export const errorLogsApi = {
 export default http;
 
 
+// Email (Gmail connection) APIs
+export const emailApi = {
+  status: async () => {
+    const { data } = await http.get("/email/status");
+    return data?.data;
+  },
+  // Returns the Google consent URL to send the browser to.
+  startGoogle: async () => {
+    const { data } = await http.post("/email/google/start");
+    return data?.data?.url;
+  },
+  test: async () => {
+    const { data } = await http.post("/email/test");
+    return data?.data;
+  },
+  disconnect: async () => {
+    const { data } = await http.delete("/email/connection");
+    return data;
+  },
+};
+
 // Homepage content APIs
 export const siteContentApi = {
   get: async () => {

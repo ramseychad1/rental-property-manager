@@ -10,6 +10,7 @@ import {
   updateUser,
   resetUserPassword,
   emailCredentials,
+  deleteUser,
 } from "../controllers/user.controller.js";
 import { requireAuth, requireSuperAdmin } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
@@ -23,6 +24,7 @@ router.patch("/updatePassword", requireAuth, updatePassword);
 router.get("/all-users", requireSuperAdmin, listAllUsers);
 router.post("/", requireSuperAdmin, createUser);
 router.patch("/:userId", requireSuperAdmin, updateUser);
+router.delete("/:userId", requireSuperAdmin, deleteUser);
 router.post("/:userId/reset-password", requireSuperAdmin, resetUserPassword);
 router.post("/:userId/email-credentials", requireSuperAdmin, emailCredentials);
 router.get("/:userId/bookings", requireAuth, userBookings);

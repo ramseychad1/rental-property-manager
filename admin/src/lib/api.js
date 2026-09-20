@@ -221,6 +221,11 @@ export const usersApi = {
     return data?.data;
   },
 
+  remove: async (userId) => {
+    const { data } = await http.delete(`/user/${userId}`);
+    return data;
+  },
+
   emailCredentials: async (userId, body) => {
     const { data } = await http.post(`/user/${userId}/email-credentials`, body);
     return data?.data;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, KeyRound, Loader2, Plus, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { Eye, KeyRound, Loader2, Plus, ShieldCheck, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
@@ -63,6 +63,7 @@ export default function UserListPage() {
   const [creds, setCreds] = useState(null); // { credentials, name, reset }
   const [busy, setBusy] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const refreshUsers = () => {
     queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -78,6 +79,22 @@ export default function UserListPage() {
       toast.success(isActive ? "User reactivated" : "User deactivated");
     } catch (err) {
       toast.error(err.normalizedMessage || "Could not update user");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteUser = async (u) => {
+    setConfirmDelete(false);
+    setBusy(true);
+    try {
+      await usersApi.remove(u.id);
+      toast.success(`${u.name} was deleted`);
+      setActive(null);
+      refreshUsers();
+    } catch (err) {
+      // e.g. an owner who still owns properties - the message says what to do
+      toast.error(err.normalizedMessage || "Could not delete user");
     } finally {
       setBusy(false);
     }
@@ -354,6 +371,21 @@ export default function UserListPage() {
                 </Card>
               )}
 
+              {active.id !== me?.id && (
+                <Card className="mt-3 p-5 rounded-xl space-y-2">
+                  <div className="overline">Danger zone</div>
+                  <Button size="sm" variant="outline" disabled={busy}
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setConfirmDelete(true)} data-testid="user-delete">
+                    <Trash2 className="w-4 h-4" /> Delete user
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Permanently removes the account. Their past bookings stay on record.
+                    To just block sign-in, use Deactivate instead.
+                  </p>
+                </Card>
+              )}
+
               <div className="mt-3">
                 <UserBookings userId={active._id} />
               </div>
@@ -379,6 +411,15 @@ export default function UserListPage() {
         name={creds?.name}
         userId={creds?.userId}
         reset={creds?.reset}
+      />
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete ${active?.name || "this user"}?`}
+        description={`This permanently deletes the account for ${active?.email || ""}. It can't be undone. Their past bookings are kept (with the guest's name and email), any Gmail they connected is disconnected, and an owner who still owns properties can't be deleted until those are reassigned.`}
+        confirmLabel="Delete user"
+        destructive
+        onConfirm={() => deleteUser(active)}
       />
       <ConfirmDialog
         open={confirmReset}

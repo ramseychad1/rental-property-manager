@@ -7,7 +7,8 @@ import { COOKIE_NAME, cookieOptions } from "../lib/jwt.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { isSuperAdmin } from "../lib/access.js";
 import { generateTempPassword } from "../lib/tempPassword.js";
-import { sendMail } from "../lib/mailer.js";
+import { sendMail, GOOGLE_OAUTH } from "../lib/mailer.js";
+import { decrypt } from "../lib/crypto.js";
 import { credentialsEmail } from "../lib/emailTemplates.js";
 
 export async function me(req, res) {
@@ -260,6 +261,55 @@ export async function emailCredentials(req, res, next) {
       );
     }
     return ok(res, { sentTo: target.email }, "Email sent");
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Permanently deletes an account. Guardrails:
+// - not your own account, and never the last Super Admin;
+// - an Owner who still owns properties can't be deleted (they'd silently become
+//   "unassigned" and vanish from that owner's view) - reassign or remove them first;
+// - bookings are kept: they store the guest's name/email themselves and just lose
+//   the link to the deleted account (FK is ON DELETE SET NULL);
+// - a connected Gmail is disconnected at Google too, then its row cascades away.
+export async function deleteUser(req, res, next) {
+  try {
+    const target = await prisma.user.findUnique({
+      where: { id: req.params.userId },
+      include: { emailConnection: true },
+    });
+    if (!target) throw new ApiError("User not found.", 404);
+    if (target.id === req.user.id) throw new ApiError("You can't delete your own account.", 400);
+
+    if (target.role === "SuperAdmin") {
+      const admins = await prisma.user.count({ where: { role: "SuperAdmin" } });
+      if (admins <= 1) throw new ApiError("You can't delete the last Super Admin.", 400);
+    }
+
+    const owned = await prisma.property.count({ where: { ownerId: target.id } });
+    if (owned > 0) {
+      throw new ApiError(
+        `${target.name} owns ${owned} propert${owned === 1 ? "y" : "ies"}. Reassign ${owned === 1 ? "it" : "them"} to another owner (edit the property) or delete ${owned === 1 ? "it" : "them"} first.`,
+        409,
+      );
+    }
+
+    // Best effort: release the Google grant so it doesn't linger on their account.
+    if (target.emailConnection) {
+      try {
+        await fetch(`${GOOGLE_OAUTH}/revoke`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ token: decrypt(target.emailConnection.refreshTokenEnc) }),
+        });
+      } catch {
+        /* already revoked, key changed, or unreachable */
+      }
+    }
+
+    await prisma.user.delete({ where: { id: target.id } });
+    return ok(res, null, "User deleted");
   } catch (err) {
     next(err);
   }

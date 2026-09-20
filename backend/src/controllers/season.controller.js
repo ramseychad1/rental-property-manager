@@ -2,7 +2,14 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeSeason } from "../lib/serialize.js";
+import { normalizeMD, isValidMD } from "../lib/seasonRange.js";
 import { findManagedProperty } from "../lib/access.js";
+
+const monthDay = z
+  .string()
+  .trim()
+  .transform(normalizeMD)
+  .refine(isValidMD, "Use a real month and day (MM-DD)");
 
 const seasonSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -10,8 +17,10 @@ const seasonSchema = z.object({
   dateRanges: z
     .array(
       z.object({
-        startDate: z.string().trim().min(1),
-        endDate: z.string().trim().min(1),
+        // "MM-DD" - seasons repeat every year. Full dates from older clients
+        // are accepted and the year is dropped.
+        startDate: monthDay,
+        endDate: monthDay,
       }),
     )
     .min(1, "At least one date range is required"),

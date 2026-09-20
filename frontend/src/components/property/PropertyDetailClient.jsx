@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import AvailabilityCard from "@/components/property/AvailabilityCard";
 import { api } from "@/services/api";
 import ImagePreviewModal from "@/components/property/ImagePreviewModel";
+import { formatMonthDay } from "@/lib/seasonRange";
 
 export default function PropertyDetailClient({
   propertyId,
@@ -301,25 +302,11 @@ export default function PropertyDetailClient({
                     </td>
 
                     <td className="px-5 py-3.5 text-[var(--color-muted-foreground)]">
-                      {new Date(s.dateRanges[0].startDate).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        },
-                      )}
+                      {formatMonthDay(s.dateRanges[0].startDate)}
                     </td>
 
                     <td className="px-5 py-3.5 text-[var(--color-muted-foreground)]">
-                      {new Date(s.dateRanges[0].endDate).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        },
-                      )}
+                      {formatMonthDay(s.dateRanges[0].endDate)}
                     </td>
 
                     <td className="px-5 py-3.5 text-center text-[var(--color-muted-foreground)]">

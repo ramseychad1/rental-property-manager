@@ -4,6 +4,7 @@ import { ok, fail, ApiError } from "../lib/response.js";
 import { serializeProperty } from "../lib/serialize.js";
 import { unflatten } from "../middleware/upload.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
+import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, findManagedProperty } from "../lib/access.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
@@ -276,9 +277,7 @@ export async function pricingPreview(req, res, next) {
     const cursor = new Date(start);
     while (cursor < end) {
       const key = cursor.toISOString().slice(0, 10);
-      const season = seasons.find((s) =>
-        (s.dateRanges || []).some((r) => key >= r.startDate.slice(0, 10) && key <= r.endDate.slice(0, 10)),
-      );
+      const season = seasonForKey(seasons, key);
       subTotal += season ? season.pricePerNight : property.priceNightly;
       cursor.setDate(cursor.getDate() + 1);
     }

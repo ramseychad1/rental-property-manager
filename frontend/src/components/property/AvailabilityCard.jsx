@@ -9,6 +9,7 @@ import GuestSelector from "@/components/property/GuestSelector";
 import { useBooking } from "@/context/BookingContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatCurrency, diffInNights } from "@/lib/utils";
+import { inSeasonRange, monthDayOf } from "@/lib/seasonRange";
 
 // ─────────────────────────── date helpers (local) ───────────────────────────
 
@@ -38,9 +39,7 @@ function getSeasonForDate(date, seasons) {
   const d = startOfDay(date);
   for (const season of seasons) {
     for (const range of season.dateRanges ?? []) {
-      const start = parseISODateLocal(range.startDate);
-      const end = parseISODateLocal(range.endDate);
-      if (start && end && d >= start && d <= end) return season;
+      if (inSeasonRange(monthDayOf(d), range.startDate, range.endDate)) return season;
     }
   }
   return null;

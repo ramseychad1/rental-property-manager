@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeBooking } from "../lib/serialize.js";
+import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, bookingScope } from "../lib/access.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
@@ -42,9 +43,7 @@ async function computePricing(propertyId, checkIn, checkOut) {
 
   while (cursor < end) {
     const key = cursor.toISOString().slice(0, 10);
-    const season = seasons.find((s) =>
-      (s.dateRanges || []).some((r) => key >= r.startDate.slice(0, 10) && key <= r.endDate.slice(0, 10)),
-    );
+    const season = seasonForKey(seasons, key);
     const seasonId = season?.id ?? "__default__";
     const pricePerNight = season?.pricePerNight ?? property.priceNightly;
 

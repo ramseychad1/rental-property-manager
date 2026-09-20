@@ -15,6 +15,7 @@ import {
 import { api } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { inSeasonRange, monthDayOf } from "@/lib/seasonRange";
 
 const MS_DAY = 86_400_000;
 
@@ -88,12 +89,7 @@ function getSeasonForDate(date, seasons) {
 
   for (const season of seasons) {
     for (const range of season.dateRanges ?? []) {
-      const start = parseISODateLocal(range.startDate);
-      const end = parseISODateLocal(range.endDate);
-
-      if (start && end && selectedDate >= start && selectedDate <= end) {
-        return season;
-      }
+      if (inSeasonRange(monthDayOf(selectedDate), range.startDate, range.endDate)) return season;
     }
   }
 

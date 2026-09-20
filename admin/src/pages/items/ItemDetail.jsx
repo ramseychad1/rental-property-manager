@@ -47,6 +47,8 @@ import { vertical } from "@/config/vertical";
 import { fmtCurrency, fmtDate } from "@/lib/formatters";
 import { toast } from "sonner";
 import { getEmbedUrl } from "../../lib/formatters";
+import MonthDayPicker from "@/components/forms/MonthDayPicker";
+import { formatMonthDay, normalizeMD } from "@/lib/seasonRange";
 
 function PricingDialog({
   open,
@@ -67,12 +69,22 @@ function PricingDialog({
   );
   const [overlapConflicts, setOverlapConflicts] = useState(null); // { conflictingSeasons: [...] }
 
-  // Check if two date ranges overlap
-  const datesOverlap = (startA, endA, startB, endB) => {
-    return (
-      new Date(startA) <= new Date(endB) && new Date(endA) >= new Date(startB)
-    );
+  // Seasons repeat yearly, so compare month/day only. Day-of-year on a leap
+  // year (2000) gives each "MM-DD" a stable number; a range whose end is
+  // before its start wraps over New Year and is split in two.
+  const dayOfYear = (md) => {
+    const [m, d] = normalizeMD(md).split("-").map(Number);
+    return Math.round((Date.UTC(2000, m - 1, d) - Date.UTC(2000, 0, 1)) / 86_400_000) + 1;
   };
+  const spans = (start, end) => {
+    const s = dayOfYear(start);
+    const e = dayOfYear(end);
+    return s <= e ? [[s, e]] : [[s, 366], [1, e]];
+  };
+  const datesOverlap = (startA, endA, startB, endB) =>
+    spans(startA, endA).some(([a1, a2]) =>
+      spans(startB, endB).some(([b1, b2]) => a1 <= b2 && a2 >= b1),
+    );
 
   // Find all existing seasons that overlap with the form's date range
   const findConflicts = () => {
@@ -160,39 +172,29 @@ function PricingDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Start date</Label>
-                <Input
-                  data-testid="pricing-form-start"
-                  type="date"
-                  value={form.dateRanges[0].startDate?.slice(0, 10) || ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      dateRanges: [
-                        { ...form.dateRanges[0], startDate: e.target.value },
-                      ],
-                    })
+                <Label>Starts</Label>
+                <MonthDayPicker
+                  testid="pricing-form-start"
+                  value={form.dateRanges[0].startDate}
+                  onChange={(v) =>
+                    setForm({ ...form, dateRanges: [{ ...form.dateRanges[0], startDate: v }] })
                   }
-                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label>End date</Label>
-                <Input
-                  data-testid="pricing-form-end"
-                  type="date"
-                  value={form.dateRanges[0].endDate?.slice(0, 10) || ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      dateRanges: [
-                        { ...form.dateRanges[0], endDate: e.target.value },
-                      ],
-                    })
+                <Label>Ends (inclusive)</Label>
+                <MonthDayPicker
+                  testid="pricing-form-end"
+                  value={form.dateRanges[0].endDate}
+                  onChange={(v) =>
+                    setForm({ ...form, dateRanges: [{ ...form.dateRanges[0], endDate: v }] })
                   }
-                  required
                 />
               </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                Repeats every year. To cover New Year, set the end before the start
+                (e.g. Dec 15 to Jan 5).
+              </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
@@ -256,7 +258,7 @@ function PricingDialog({
                     `• "${s.name}" (${s.dateRanges
                       ?.map(
                         (r) =>
-                          `${fmtDate(r.startDate)} → ${fmtDate(r.endDate)}`,
+                          `${formatMonthDay(r.startDate)} → ${formatMonthDay(r.endDate)}`,
                       )
                       .join(", ")})`,
                 )
@@ -483,8 +485,9 @@ export default function ItemDetailPage() {
                         <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                           {s.dateRanges?.map((range, i) => (
                             <div key={i} className="mt-2">
-                              {fmtDate(range.startDate)} →{" "}
-                              {fmtDate(range.endDate)}
+                              {formatMonthDay(range.startDate)} →{" "}
+                              {formatMonthDay(range.endDate)}
+                              <span className="text-muted-foreground/70"> · every year</span>
                             </div>
                           ))}
                         </TableCell>

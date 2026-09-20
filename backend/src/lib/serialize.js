@@ -1,3 +1,5 @@
+import { normalizeMD } from "./seasonRange.js";
+
 // The frontend and admin panel were originally built against a Mongoose/Mongo
 // API and still expect Mongo-shaped JSON (`_id`, nested nested `price`/
 // `images`/`location` objects, populated `userId`/`propertyId` sub-documents
@@ -69,7 +71,11 @@ export function serializeSeason(s) {
     propertyId: s.propertyId,
     name: s.name,
     pricePerNight: s.pricePerNight,
-    dateRanges: s.dateRanges ?? [],
+    // Ranges are month/day only and repeat yearly; strip the year from legacy rows.
+    dateRanges: (s.dateRanges ?? []).map((r) => ({
+      startDate: normalizeMD(r.startDate),
+      endDate: normalizeMD(r.endDate),
+    })),
   };
 }
 

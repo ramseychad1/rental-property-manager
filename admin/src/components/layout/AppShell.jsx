@@ -32,24 +32,49 @@ export default function AppShell() {
             </div>
           </div>
           <nav className="py-3 px-3 space-y-0.5">
-            {navConfig.filter((item) => isSuperAdmin || !item.superAdminOnly).map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                data-testid={`mobile-${item.testid}`}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium transition-colors",
-                    "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                    isActive && "bg-sidebar-accent text-sidebar-foreground",
-                  )
-                }
-              >
-                <item.icon className="w-5 h-5" /> {item.label}
-              </NavLink>
-            ))}
+            {navConfig.filter((item) => isSuperAdmin || !item.superAdminOnly).map((item) =>
+              item.children ? (
+                <div key={item.testid} className="pt-1">
+                  <div className="flex items-center gap-3 px-3 h-8 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                    <item.icon className="w-4 h-4" /> {item.label}
+                  </div>
+                  {item.children.map((c) => (
+                    <NavLink
+                      key={c.to}
+                      to={c.to}
+                      data-testid={`mobile-${c.testid}`}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          "ml-4 flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium transition-colors",
+                          "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                          isActive && "bg-sidebar-accent text-sidebar-foreground",
+                        )
+                      }
+                    >
+                      <c.icon className="w-5 h-5" /> {c.label}
+                    </NavLink>
+                  ))}
+                </div>
+              ) : (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  data-testid={`mobile-${item.testid}`}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium transition-colors",
+                      "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                      isActive && "bg-sidebar-accent text-sidebar-foreground",
+                    )
+                  }
+                >
+                  <item.icon className="w-5 h-5" /> {item.label}
+                </NavLink>
+              ),
+            )}
           </nav>
         </SheetContent>
       </Sheet>

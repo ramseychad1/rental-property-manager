@@ -5,7 +5,6 @@ import {
   Users,
   Settings,
   MapPinned,
-  ListX,
   LayoutTemplate,
 } from "lucide-react";
 import { vertical } from "@/config/vertical";
@@ -30,19 +29,16 @@ export const navConfig = [
     icon: CalendarCheck2,
     testid: "nav-bookings",
   },
-  {
-    label: "Things To Do",
-    superAdminOnly: true,
-    to: "/things-to-do",
-    icon: MapPinned,
-    testid: "nav-things-to-do",
-  },
+  // A group: expands in the sidebar to show its children.
   {
     label: "Site Content",
     superAdminOnly: true,
-    to: "/site-content",
     icon: LayoutTemplate,
     testid: "nav-site-content",
+    children: [
+      { label: "Page content", to: "/site-content", icon: LayoutTemplate, testid: "nav-site-content-pages" },
+      { label: "Things To Do", to: "/things-to-do", icon: MapPinned, testid: "nav-things-to-do" },
+    ],
   },
   {
     label: "Users",
@@ -50,13 +46,6 @@ export const navConfig = [
     to: "/users",
     icon: Users,
     testid: "nav-users",
-  },
-  {
-    label: "Error Logs",
-    superAdminOnly: true,
-    to: "/logs",
-    icon: ListX,
-    testid: "nav-error-logs",
   },
   {
     label: "Settings",

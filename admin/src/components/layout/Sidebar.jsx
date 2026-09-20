@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navConfig } from "@/config/nav";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,80 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+const isUnder = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
+
+// A menu entry with children: click to expand/collapse; opens itself when you
+// are on one of its pages. In the collapsed (icon-only) sidebar it becomes one
+// icon that goes to the first child.
+function NavGroup({ item, collapsed }) {
+  const { pathname } = useLocation();
+  const childActive = item.children.some((c) => isUnder(pathname, c.to));
+  const [open, setOpen] = useState(childActive);
+  useEffect(() => {
+    if (childActive) setOpen(true);
+  }, [childActive]);
+
+  const rowClass = cn(
+    "group relative overflow-hidden flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium transition-colors w-full",
+    "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+    childActive && "text-sidebar-foreground",
+    collapsed && "justify-center px-0",
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <NavLink to={item.children[0].to} data-testid={item.testid}>
+            <div className={cn(rowClass, childActive && "bg-sidebar-accent")}>
+              <item.icon className="w-[18px] h-[18px] shrink-0" />
+            </div>
+          </NavLink>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="font-medium">
+          {item.label}: {item.children.map((c) => c.label).join(", ")}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        data-testid={item.testid}
+        className={rowClass}
+      >
+        <item.icon className="w-[18px] h-[18px] shrink-0" />
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronDown className={cn("w-4 h-4 shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="mt-0.5 ml-5 space-y-0.5 border-l border-sidebar-border pl-2">
+          {item.children.map((c) => (
+            <NavLink key={c.to} to={c.to} data-testid={c.testid}>
+              {({ isActive }) => (
+                <div
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3 h-9 text-sm font-medium transition-colors",
+                    "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                    isActive && "bg-sidebar-accent text-sidebar-foreground",
+                  )}
+                >
+                  <c.icon className="w-4 h-4 shrink-0" />
+                  {c.label}
+                </div>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Sidebar({ collapsed, onToggle }) {
   const { isSuperAdmin } = useAuth();
@@ -39,6 +113,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       <TooltipProvider delayDuration={0}>
         <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto scrollbar-thin">
           {navConfig.filter((item) => isSuperAdmin || !item.superAdminOnly).map((item) => {
+            if (item.children) return <NavGroup key={item.testid} item={item} collapsed={collapsed} />;
             const link = (
               <NavLink
                 key={item.to}

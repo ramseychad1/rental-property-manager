@@ -29,6 +29,4 @@ export const queryKeys = {
   users: (params) => ["users", params],
   pricing: (propertyId) => ["pricing", propertyId],
   bookedDates: (propertyId) => ["bookedDates", propertyId],
-  errorLogs: (params) => ["errorLogs", params],
-  errorLog: (id) => ["errorLog", id],
 };

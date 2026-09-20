@@ -25,7 +25,6 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const ThingsToDoList = lazy(() => import("@/pages/ThingsToDo/ThingsToDoList"));
 const ThingsToDoDetail = lazy(() => import("@/pages/ThingsToDo/ThingsToDoDetail"));
 const ThingsToDoForm = lazy(() => import("@/pages/ThingsToDo/ThingsToDoForm"));
-const ErrorLogsPage = lazy(() => import("@/pages/logs/ErrorLogs"));
 
 function RouteFallback() {
   return (
@@ -69,7 +68,6 @@ export default function App() {
                     <Route path="bookings" element={<BookingListPage />} />
                     <Route path="pricing" element={<Navigate to={`/${vertical.item.slug}`} replace />} />
                     <Route path="users" element={<SuperAdminRoute><UserListPage /></SuperAdminRoute>} />
-                    <Route path="logs" element={<SuperAdminRoute><ErrorLogsPage /></SuperAdminRoute>} />
                     <Route path="site-content" element={<SuperAdminRoute><SiteContentPage /></SuperAdminRoute>} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>

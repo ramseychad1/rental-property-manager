@@ -269,29 +269,6 @@ export const thingsToDoApi = {
   },
 };
 
-// Error log APIs
-export const errorLogsApi = {
-  list: async (params = {}) => {
-    const { data } = await http.get("/errors", { params });
-    return data?.data || { errors: [], pagination: {} };
-  },
-
-  get: async (id) => {
-    const { data } = await http.get(`/errors/${id}`);
-    return data?.data;
-  },
-
-  remove: async (id) => {
-    const { data } = await http.delete(`/errors/${id}`);
-    return data;
-  },
-
-  removeMany: async (body) => {
-    const { data } = await http.delete("/errors", { data: body });
-    return data?.data || { deletedCount: 0 };
-  },
-};
-
 export default http;
 
 

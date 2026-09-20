@@ -20,3 +20,15 @@ export function formatMonthDay(v) {
   if (!m || !d) return "";
   return new Date(2000, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const weekdayName = (d) => DAYS[d];
+
+// "Sat → Sat" / "Check-in Sat" / "Check-out Sat" for a season, or "" if unrestricted.
+export function weekdayRule({ checkInDay, checkOutDay }) {
+  const short = (d) => DAYS[d].slice(0, 3);
+  if (checkInDay != null && checkOutDay != null) return `${short(checkInDay)} → ${short(checkOutDay)}`;
+  if (checkInDay != null) return `Check-in ${short(checkInDay)}`;
+  if (checkOutDay != null) return `Check-out ${short(checkOutDay)}`;
+  return "";
+}

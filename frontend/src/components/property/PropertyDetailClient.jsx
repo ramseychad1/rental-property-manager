@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import AvailabilityCard from "@/components/property/AvailabilityCard";
 import { api } from "@/services/api";
 import ImagePreviewModal from "@/components/property/ImagePreviewModel";
-import { formatMonthDay } from "@/lib/seasonRange";
+import { formatMonthDay, weekdayRule } from "@/lib/seasonRange";
 
 export default function PropertyDetailClient({
   propertyId,
@@ -281,6 +281,9 @@ export default function PropertyDetailClient({
                   <th className="px-5 py-3.5 font-semibold text-center">
                     Max Nights
                   </th>
+                  <th className="px-5 py-3.5 font-semibold text-center">
+                    Arrive / Depart
+                  </th>
                   <th className="px-5 py-3.5 font-semibold text-right">
                     Per Night
                   </th>
@@ -315,6 +318,10 @@ export default function PropertyDetailClient({
 
                     <td className="px-5 py-3.5 text-center text-[var(--color-muted-foreground)]">
                       {s.maxNights ? `${s.maxNights} nights` : "—"}
+                    </td>
+
+                    <td className="px-5 py-3.5 text-center text-[var(--color-muted-foreground)]">
+                      {weekdayRule(s) || "Any day"}
                     </td>
 
                     <td className="px-5 py-3.5 text-right">

@@ -17,11 +17,19 @@ const nights = z.preprocess(
   z.coerce.number().int().min(1, "Must be at least 1").nullable(),
 );
 
+// 0 (Sunday) - 6 (Saturday); blank/absent = any day.
+const weekday = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? null : v),
+  z.coerce.number().int().min(0).max(6).nullable(),
+);
+
 const seasonSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   pricePerNight: z.coerce.number().min(0),
   minNights: nights.optional(),
   maxNights: nights.optional(),
+  checkInDay: weekday.optional(),
+  checkOutDay: weekday.optional(),
   dateRanges: z
     .array(
       z.object({
@@ -67,6 +75,8 @@ export async function createSeason(req, res, next) {
         dateRanges: body.dateRanges,
         minNights: body.minNights ?? null,
         maxNights: body.maxNights ?? null,
+        checkInDay: body.checkInDay ?? null,
+        checkOutDay: body.checkOutDay ?? null,
       },
     });
 
@@ -99,6 +109,8 @@ export async function updateSeason(req, res, next) {
         ...(body.dateRanges !== undefined && { dateRanges: body.dateRanges }),
         ...(body.minNights !== undefined && { minNights: body.minNights }),
         ...(body.maxNights !== undefined && { maxNights: body.maxNights }),
+        ...(body.checkInDay !== undefined && { checkInDay: body.checkInDay }),
+        ...(body.checkOutDay !== undefined && { checkOutDay: body.checkOutDay }),
       },
     });
 

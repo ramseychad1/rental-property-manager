@@ -75,6 +75,8 @@ export function serializeSeason(s) {
     pricePerNight: s.pricePerNight,
     minNights: s.minNights ?? null,
     maxNights: s.maxNights ?? null,
+    checkInDay: s.checkInDay ?? null,
+    checkOutDay: s.checkOutDay ?? null,
     // Ranges are month/day only and repeat yearly; strip the year from legacy rows.
     dateRanges: (s.dateRanges ?? []).map((r) => ({
       startDate: normalizeMD(r.startDate),

@@ -15,7 +15,7 @@ import {
 import { api } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { inSeasonRange, monthDayOf } from "@/lib/seasonRange";
+import { inSeasonRange, monthDayOf, weekdayName } from "@/lib/seasonRange";
 
 const MS_DAY = 86_400_000;
 
@@ -298,6 +298,18 @@ export default function BookingCalendar({
   const disabledDays = useMemo(() => {
     const disabled = [{ before: today }, ...bookedDates];
 
+    // Weekday rules (e.g. Saturday to Saturday). A check-in date must satisfy
+    // the check-in day of the season it falls in; once a check-in is picked,
+    // check-out days after it must match that season's check-out day.
+    disabled.push((date) => {
+      if (selectingCheckout && fromDate && date > fromDate) {
+        const rule = activeSeason?.checkOutDay;
+        return rule != null && date.getDay() !== rule;
+      }
+      const rule = getSeasonForDate(date, seasons)?.checkInDay;
+      return rule != null && date.getDay() !== rule;
+    });
+
     if (selectingCheckout && fromDate) {
       disabled.push({
         from: fromDate,
@@ -332,6 +344,8 @@ export default function BookingCalendar({
     effectiveMinNights,
     effectiveMaxNights,
     nextBookedAfter,
+    seasons,
+    activeSeason,
   ]);
 
   const previewEnd = useMemo(() => {
@@ -476,8 +490,22 @@ export default function BookingCalendar({
           : "";
 
       const seasonLabel = activeSeason ? ` (${activeSeason.name})` : "";
+      const dayLabel =
+        activeSeason?.checkOutDay != null
+          ? ` · ${weekdayName(activeSeason.checkOutDay)} checkout`
+          : "";
 
-      return `Pick checkout · ${minLabel}${maxLabel}${seasonLabel}`;
+      return `Pick checkout · ${minLabel}${maxLabel}${dayLabel}${seasonLabel}`;
+    }
+
+    // Some seasons only allow one arrival weekday; say so up front.
+    const arrivalDays = [
+      ...new Set(seasons.map((s) => s.checkInDay).filter((d) => d != null)),
+    ];
+    if (arrivalDays.length > 0) {
+      return `Select your check-in date · some seasons allow ${arrivalDays
+        .map(weekdayName)
+        .join("/")} arrivals only`;
     }
 
     return "Select your check-in date";
@@ -491,6 +519,7 @@ export default function BookingCalendar({
     effectiveMinNights,
     effectiveMaxNights,
     activeSeason,
+    seasons,
   ]);
 
   const dayPickerProps = {

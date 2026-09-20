@@ -47,6 +47,7 @@ import { vertical } from "@/config/vertical";
 import { fmtCurrency, fmtDate } from "@/lib/formatters";
 import { toast } from "sonner";
 import { getEmbedUrl } from "../../lib/formatters";
+import WeekdaySelect, { weekdayRule } from "@/components/forms/WeekdaySelect";
 import MonthDayPicker from "@/components/forms/MonthDayPicker";
 import { formatMonthDay, normalizeMD } from "@/lib/seasonRange";
 
@@ -64,6 +65,8 @@ function PricingDialog({
       pricePerNight: 100,
       minNights: "",
       maxNights: "",
+      checkInDay: null,
+      checkOutDay: null,
       dateRanges: [{ startDate: "", endDate: "" }],
     },
   );
@@ -129,6 +132,8 @@ function PricingDialog({
       // Blank = no season-specific limit (falls back to the property's minimum).
       minNights: form.minNights === "" || form.minNights == null ? null : Number(form.minNights),
       maxNights: form.maxNights === "" || form.maxNights == null ? null : Number(form.maxNights),
+      checkInDay: form.checkInDay ?? null,
+      checkOutDay: form.checkOutDay ?? null,
     };
     try {
       if (initial?._id) {
@@ -233,6 +238,28 @@ function PricingDialog({
                   }
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Check-in day</Label>
+                <WeekdaySelect
+                  testid="pricing-form-checkin-day"
+                  value={form.checkInDay}
+                  onChange={(v) => setForm({ ...form, checkInDay: v })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Check-out day</Label>
+                <WeekdaySelect
+                  testid="pricing-form-checkout-day"
+                  value={form.checkOutDay}
+                  onChange={(v) => setForm({ ...form, checkOutDay: v })}
+                />
+              </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                Optional. Choose Saturday for both to require Saturday-to-Saturday
+                stays. Applies to stays that start in this {vertical.copy.pricingRule.toLowerCase()}.
+              </p>
             </div>
             <DialogFooter>
               <Button
@@ -502,6 +529,9 @@ export default function ItemDetailPage() {
                         </TableCell>
                         <TableCell className="font-mono text-xs">
                           {s.minNights ?? "default"} – {s.maxNights ?? "no limit"}
+                          {weekdayRule(s) && (
+                            <div className="text-muted-foreground mt-1">{weekdayRule(s)}</div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">

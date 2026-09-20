@@ -14,6 +14,8 @@ function generateBookingId() {
   return `SN-${stamp}-${rand}`;
 }
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function startOfDay(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -42,6 +44,15 @@ async function computePricing(propertyId, checkIn, checkOut) {
   }
   if (maxNights && nights > maxNights) {
     throw new ApiError(`This stay allows a maximum of ${maxNights} nights.`, 400);
+  }
+  // Optional weekday rules (e.g. Saturday to Saturday) from the same season.
+  // Dates are UTC-midnight calendar dates, so read the weekday in UTC.
+  const weekdayOf = (d) => new Date(d).getUTCDay();
+  if (checkInSeason?.checkInDay != null && weekdayOf(checkIn) !== checkInSeason.checkInDay) {
+    throw new ApiError(`Check-in must be on a ${WEEKDAYS[checkInSeason.checkInDay]} for this season.`, 400);
+  }
+  if (checkInSeason?.checkOutDay != null && weekdayOf(checkOut) !== checkInSeason.checkOutDay) {
+    throw new ApiError(`Check-out must be on a ${WEEKDAYS[checkInSeason.checkOutDay]} for this season.`, 400);
   }
 
   const segments = [];

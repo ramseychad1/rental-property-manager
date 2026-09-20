@@ -124,6 +124,10 @@ model Season {
   // Null = fall back to the property's minimum / no maximum.
   minNights     Int?
   maxNights     Int?
+  // Required weekday (0 = Sunday ... 6 = Saturday) for check-in / check-out on
+  // stays that start in this season. Null = any day.
+  checkInDay    Int?
+  checkOutDay   Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

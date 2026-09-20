@@ -32,3 +32,40 @@ export function weekdayRule({ checkInDay, checkOutDay }) {
   if (checkOutDay != null) return `Check-out ${short(checkOutDay)}`;
   return "";
 }
+
+const localDate = (iso) => {
+  const [y, m, d] = String(iso).slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
+/**
+ * Checks a saved/selected stay against the season it starts in (min/max nights
+ * and check-in/check-out weekday). Returns a guest-facing message, or null if
+ * the stay is fine. checkOut may be null to validate a lone check-in date.
+ */
+export function stayRuleProblem({ checkIn, checkOut, seasons, defaultMinNights = 1 }) {
+  if (!checkIn) return null;
+  const start = localDate(checkIn);
+  const md = monthDayOf(start);
+  const season = (seasons || []).find((s) =>
+    (s.dateRanges || []).some((r) => inSeasonRange(md, r.startDate, r.endDate)),
+  );
+  if (!season) return null;
+
+  if (season.checkInDay != null && start.getDay() !== season.checkInDay) {
+    return `${season.name} stays must check in on a ${DAYS[season.checkInDay]}.`;
+  }
+  if (!checkOut) return null;
+
+  const end = localDate(checkOut);
+  if (season.checkOutDay != null && end.getDay() !== season.checkOutDay) {
+    return `${season.name} stays must check out on a ${DAYS[season.checkOutDay]}.`;
+  }
+  const nights = Math.round((end - start) / 86_400_000);
+  const min = season.minNights ?? defaultMinNights;
+  if (nights < min) return `${season.name} stays require at least ${min} nights.`;
+  if (season.maxNights && nights > season.maxNights) {
+    return `${season.name} stays allow at most ${season.maxNights} nights.`;
+  }
+  return null;
+}

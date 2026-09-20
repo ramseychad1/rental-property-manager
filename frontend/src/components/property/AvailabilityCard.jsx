@@ -9,7 +9,8 @@ import GuestSelector from "@/components/property/GuestSelector";
 import { useBooking } from "@/context/BookingContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatCurrency, diffInNights } from "@/lib/utils";
-import { inSeasonRange, monthDayOf } from "@/lib/seasonRange";
+import { inSeasonRange, monthDayOf, stayRuleProblem } from "@/lib/seasonRange";
+import { toast } from "sonner";
 
 // ─────────────────────────── date helpers (local) ───────────────────────────
 
@@ -109,6 +110,23 @@ export default function AvailabilityCard({
   );
 
   const nights = checkIn && checkOut ? diffInNights(checkIn, checkOut) : 0;
+
+  // A saved draft (or dates picked before an owner changed the season rules)
+  // may no longer fit the season it starts in. Clear it and say why, instead
+  // of leaving an invalid stay selected.
+  useEffect(() => {
+    if (!Array.isArray(seasons) || !checkIn) return;
+    const problem = stayRuleProblem({
+      checkIn,
+      checkOut,
+      seasons,
+      defaultMinNights: property?.minNights || 1,
+    });
+    if (problem) {
+      toast.error(`${problem} Please pick new dates.`);
+      update({ propertyId, checkIn: null, checkOut: null });
+    }
+  }, [seasons, checkIn, checkOut]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fallbackNightly = property?.price?.nightly ?? 0;
   const cleaningFee = property?.price?.cleaningFee ?? 0;

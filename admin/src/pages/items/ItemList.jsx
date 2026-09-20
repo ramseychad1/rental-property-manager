@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   MapPin,
+  UserRound,
   BedDouble,
   Bath,
   Users as UsersIcon,
@@ -42,6 +43,20 @@ import { vertical } from "@/config/vertical";
 import { fmtCurrency } from "@/lib/formatters";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+
+// Super Admin only: who manages this property (the API only sends `owner` to them).
+function OwnerLine({ property, className = "" }) {
+  if (property.owner === undefined) return null;
+  return (
+    <div
+      className={`flex items-center gap-1 text-xs ${property.owner ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400 font-medium"} ${className}`}
+      title={property.owner?.email}
+      data-testid={`item-owner-${property._id}`}
+    >
+      <UserRound className="w-3 h-3" /> {property.owner ? property.owner.name : "Unassigned"}
+    </div>
+  );
+}
 
 export default function ItemListPage() {
   const navigate = useNavigate();
@@ -136,6 +151,7 @@ export default function ItemListPage() {
               <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="w-3 h-3" /> {p.location.city}, {p.location.country}
               </div>
+              <OwnerLine property={p} className="mt-1" />
               <div className="mt-3 pt-3 border-t border-border flex items-center gap-4 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <UsersIcon className="w-3.5 h-3.5" /> {p.guests}
@@ -258,6 +274,7 @@ export default function ItemListPage() {
                 <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3" /> {p.location.city}, {p.location.country}
                 </div>
+                <OwnerLine property={p} className="mt-0.5" />
               </div>
               <div className="font-mono font-semibold">{fmtCurrency(p.price?.nightly)}</div>
             </Link>

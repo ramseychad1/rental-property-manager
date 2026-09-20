@@ -81,9 +81,11 @@ export async function listProperties(req, res, next) {
       where.title = { contains: String(search), mode: "insensitive" };
     }
 
+    // Super Admins see who manages each property in the admin list.
     const properties = await prisma.property.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      ...(managing && isSuperAdmin(req.user) && { include: { owner: { select: { id: true, name: true, email: true } } } }),
     });
 
     return ok(res, properties.map(serializeProperty));

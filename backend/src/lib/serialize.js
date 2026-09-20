@@ -36,6 +36,8 @@ export function serializeProperty(p) {
     description: p.description ?? "",
     status: p.status,
     ownerId: p.ownerId ?? null,
+    // Only present when the query loaded the owner (Super Admin list view); null = unassigned.
+    ...(p.owner !== undefined && { owner: p.owner ? { _id: p.owner.id, name: p.owner.name, email: p.owner.email } : null }),
     minNights: p.minNights,
     maxNights: p.maxNights ?? null,
     guests: p.guests,

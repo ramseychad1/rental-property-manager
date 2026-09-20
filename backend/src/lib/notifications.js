@@ -17,7 +17,7 @@ export async function notifyBookingCreated(booking) {
     const p = booking.property;
     const owner = await ownerOf(p);
 
-    const guest = guestBookingEmail("received", booking, p, { ownerName: owner?.name });
+    const guest = guestBookingEmail("received", booking, p, { ownerName: owner?.name, siteUrl: process.env.FRONTEND_URL });
     await sendMail({
       kind: "booking-received", to: booking.guestEmail, ...guest,
       ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id,
@@ -39,7 +39,7 @@ export async function notifyBookingEvent(event, booking) {
   try {
     const p = booking.property;
     const owner = await ownerOf(p);
-    const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name });
+    const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name, siteUrl: process.env.FRONTEND_URL });
     await sendMail({
       kind: `booking-${event}`, to: booking.guestEmail, ...mail,
       ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id,

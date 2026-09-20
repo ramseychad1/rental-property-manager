@@ -23,7 +23,12 @@ export const fmtStayDate = (d) =>
 
 const money = (n) => `$${Number(n || 0).toLocaleString("en-US")}`;
 
-function layout({ heading, intro, rows = [], outro = "", brand = "Rental Property Manager" }) {
+// Only http(s) links, trailing slash trimmed; anything else is dropped so a bad
+// config value can never produce a broken or unsafe link.
+export const cleanUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? String(u).replace(/\/+$/, "") : "");
+
+function layout({ heading, intro, rows = [], outro = "", cta = null, brand = "Rental Property Manager" }) {
+  const link = cta && cleanUrl(cta.url) ? { label: cta.label, url: cleanUrl(cta.url) } : null;
   const rowHtml = rows
     .map(
       ([k, v]) =>
@@ -35,11 +40,12 @@ function layout({ heading, intro, rows = [], outro = "", brand = "Rental Propert
 <h1 style="margin:0 0 12px;font-size:20px">${esc(heading)}</h1>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.5">${intro}</p>
 ${rows.length ? `<table style="border-collapse:collapse;margin:0 0 16px">${rowHtml}</table>` : ""}
+${link ? `<p style="margin:0 0 16px"><a href="${esc(link.url)}" style="display:inline-block;background:#0b7c83;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:8px">${esc(link.label)}</a></p><p style="margin:0 0 16px;font-size:12px;color:#6b7280;word-break:break-all">Or copy this link: ${esc(link.url)}</p>` : ""}
 ${outro ? `<p style="margin:0;font-size:15px;line-height:1.5">${outro}</p>` : ""}
 </div>
 <p style="max-width:560px;margin:12px auto 0;font-size:12px;color:#9ca3af;text-align:center">${esc(brand)}</p>
 </body></html>`;
-  const text = [heading, "", stripTags(intro), "", ...rows.map(([k, v]) => `${k}: ${v}`), "", stripTags(outro)]
+  const text = [heading, "", stripTags(intro), "", ...rows.map(([k, v]) => `${k}: ${v}`), ...(link ? ["", `${link.label}: ${link.url}`] : []), "", stripTags(outro)]
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -58,7 +64,7 @@ const stayRows = (b, p) => [
   ["Booking ID", b.bookingId],
 ];
 
-export function guestBookingEmail(event, b, p, { ownerName } = {}) {
+export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
   const who = esc(b.guestName);
   const contact = ownerName ? ` If you have questions, just reply to this email.` : "";
   const copy = {
@@ -93,18 +99,25 @@ export function guestBookingEmail(event, b, p, { ownerName } = {}) {
       intro: `Hi ${who}, your payment has been refunded and the booking is cancelled.${contact}`,
     },
   }[event];
-  return { subject: copy.subject, ...layout({ heading: copy.heading, intro: copy.intro, rows: stayRows(b, p) }) };
+  const site = cleanUrl(siteUrl);
+  const cta = site
+    ? event === "rejected" || event === "cancelled" || event === "refunded"
+      ? { label: "Browse other dates or properties", url: `${site}/properties` }
+      : { label: "View my booking", url: `${site}/bookings` }
+    : null;
+  return { subject: copy.subject, ...layout({ heading: copy.heading, intro: copy.intro, rows: stayRows(b, p), cta }) };
 }
 
 export function ownerNewBookingEmail(b, p, { adminUrl } = {}) {
-  const link = adminUrl ? `<a href="${esc(adminUrl)}/bookings">Review it in your admin</a>.` : "Review it in your admin panel.";
+  const admin = cleanUrl(adminUrl);
   return {
     subject: `New booking request - ${p.title}`,
     ...layout({
       heading: "New booking request",
       intro: `${esc(b.guestName)} (${esc(b.guestEmail)}${b.guestPhone ? `, ${esc(b.guestPhone)}` : ""}) requested a stay.`,
       rows: [...stayRows(b, p), ...(b.notes ? [["Notes", b.notes]] : [])],
-      outro: link,
+      cta: admin ? { label: "Review this booking", url: `${admin}/bookings` } : null,
+      outro: admin ? "" : "Review it in your admin panel.",
     }),
   };
 }
@@ -150,6 +163,7 @@ export function credentialsEmail({ name, loginUrl, email, tempPassword, reset })
       heading: reset ? "Your password was reset" : "Your account is ready",
       intro: `Hi ${esc(name)}, ${reset ? "your password was reset by an administrator." : "an administrator created an account for you."} Sign in with the details below. You'll be asked to choose your own password the first time.`,
       rows: [["Login URL", loginUrl], ["User ID", email], ["Temporary password", tempPassword]],
+      cta: { label: "Sign in", url: loginUrl },
       outro: "The temporary password stops working once you set your own. If you weren't expecting this email, you can ignore it.",
     }),
   };

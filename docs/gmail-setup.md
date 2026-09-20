@@ -13,7 +13,7 @@ The app sends email through each owner's own Gmail (Gmail API, "send email" perm
    - Authorized redirect URIs (exact): `http://localhost:8001/api/email/google/callback` and `https://backend-production-933a.up.railway.app/api/email/google/callback`.
    - Copy the **Client ID** and **Client secret**.
 5. Set on the backend (locally in `backend/.env`, on Railway as service variables):
-   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (`http://localhost:8001/api/email/google/callback` locally, `https://backend-production-933a.up.railway.app/api/email/google/callback` on Railway), `EMAIL_TOKEN_KEY` (`openssl rand -base64 32`). Optionally `ADMIN_URL` (`https://admin-production-bbad.up.railway.app` on Railway). The backend's `CLIENT_URLS` must already include the admin URL, since the connect flow checks against it. Redeploy.
+   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (`http://localhost:8001/api/email/google/callback` locally, `https://backend-production-933a.up.railway.app/api/email/google/callback` on Railway), `EMAIL_TOKEN_KEY` (`openssl rand -base64 32`). Also set `ADMIN_URL` (`https://admin-production-bbad.up.railway.app`) and `FRONTEND_URL` (`https://frontend-production-c0d1.up.railway.app`): they turn into the buttons in emails ("Review this booking" for owners, "View my booking" for guests). Without them the emails still send, just without links. The backend's `CLIENT_URLS` must already include the admin URL, since the connect flow checks against it. Redeploy.
 6. Sign in to the admin as the SuperAdmin -> **Settings -> Email -> Connect Gmail**. That is now the system sender.
 
 Owners then do only: **Settings -> Email -> Connect Gmail -> pick account -> Allow**.

@@ -11,9 +11,17 @@ const monthDay = z
   .transform(normalizeMD)
   .refine(isValidMD, "Use a real month and day (MM-DD)");
 
+// Blank/absent = no season-specific limit.
+const nights = z.preprocess(
+  (v) => (v === "" || v === null || v === undefined ? null : v),
+  z.coerce.number().int().min(1, "Must be at least 1").nullable(),
+);
+
 const seasonSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   pricePerNight: z.coerce.number().min(0),
+  minNights: nights.optional(),
+  maxNights: nights.optional(),
   dateRanges: z
     .array(
       z.object({
@@ -25,6 +33,12 @@ const seasonSchema = z.object({
     )
     .min(1, "At least one date range is required"),
 });
+
+function checkNightRange(body) {
+  if (body.minNights != null && body.maxNights != null && body.maxNights < body.minNights) {
+    throw new ApiError("Max nights can't be less than min nights.", 422);
+  }
+}
 
 export async function listSeasons(req, res, next) {
   try {
@@ -41,6 +55,7 @@ export async function listSeasons(req, res, next) {
 export async function createSeason(req, res, next) {
   try {
     const body = seasonSchema.parse(req.body);
+    checkNightRange(body);
 
     await findManagedProperty(req.user, req.params.propertyId);
 
@@ -50,6 +65,8 @@ export async function createSeason(req, res, next) {
         name: body.name,
         pricePerNight: body.pricePerNight,
         dateRanges: body.dateRanges,
+        minNights: body.minNights ?? null,
+        maxNights: body.maxNights ?? null,
       },
     });
 
@@ -66,6 +83,7 @@ export async function createSeason(req, res, next) {
 export async function updateSeason(req, res, next) {
   try {
     const body = seasonSchema.partial().parse(req.body);
+    checkNightRange(body);
     await findManagedProperty(req.user, req.params.propertyId);
 
     const existing = await prisma.season.findFirst({
@@ -79,6 +97,8 @@ export async function updateSeason(req, res, next) {
         ...(body.name !== undefined && { name: body.name }),
         ...(body.pricePerNight !== undefined && { pricePerNight: body.pricePerNight }),
         ...(body.dateRanges !== undefined && { dateRanges: body.dateRanges }),
+        ...(body.minNights !== undefined && { minNights: body.minNights }),
+        ...(body.maxNights !== undefined && { maxNights: body.maxNights }),
       },
     });
 

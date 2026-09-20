@@ -310,11 +310,11 @@ export default function PropertyDetailClient({
                     </td>
 
                     <td className="px-5 py-3.5 text-center text-[var(--color-muted-foreground)]">
-                      {s.minNights} nights
+                      {s.minNights ? `${s.minNights} nights` : "—"}
                     </td>
 
                     <td className="px-5 py-3.5 text-center text-[var(--color-muted-foreground)]">
-                      {s.maxNights} nights
+                      {s.maxNights ? `${s.maxNights} nights` : "—"}
                     </td>
 
                     <td className="px-5 py-3.5 text-right">

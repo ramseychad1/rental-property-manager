@@ -33,8 +33,15 @@ async function computePricing(propertyId, checkIn, checkOut) {
 
   const nights = diffNights(checkIn, checkOut);
   if (nights <= 0) throw new ApiError("Check-out must be after check-in.", 400);
-  if (nights < property.minNights) {
-    throw new ApiError(`This property requires a minimum stay of ${property.minNights} nights.`, 400);
+  // Stay limits follow the season the check-in night falls in.
+  const checkInSeason = seasonForKey(seasons, startOfDay(checkIn).toISOString().slice(0, 10));
+  const minNights = checkInSeason?.minNights ?? property.minNights;
+  const maxNights = checkInSeason?.maxNights ?? null;
+  if (nights < minNights) {
+    throw new ApiError(`This stay requires a minimum of ${minNights} nights.`, 400);
+  }
+  if (maxNights && nights > maxNights) {
+    throw new ApiError(`This stay allows a maximum of ${maxNights} nights.`, 400);
   }
 
   const segments = [];

@@ -120,6 +120,10 @@ model Season {
   name          String
   pricePerNight Int
   dateRanges    Json
+  // Stay limits that apply when the check-in night falls in this season.
+  // Null = fall back to the property's minimum / no maximum.
+  minNights     Int?
+  maxNights     Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

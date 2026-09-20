@@ -62,8 +62,8 @@ function PricingDialog({
     initial || {
       name: "",
       pricePerNight: 100,
-      minNights: 1,
-      maxNights: 14,
+      minNights: "",
+      maxNights: "",
       dateRanges: [{ startDate: "", endDate: "" }],
     },
   );
@@ -126,8 +126,9 @@ function PricingDialog({
     const payload = {
       ...form,
       pricePerNight: Number(form.pricePerNight),
-      minNights: Number(form.minNights),
-      maxNights: Number(form.maxNights),
+      // Blank = no season-specific limit (falls back to the property's minimum).
+      minNights: form.minNights === "" || form.minNights == null ? null : Number(form.minNights),
+      maxNights: form.maxNights === "" || form.maxNights == null ? null : Number(form.maxNights),
     };
     try {
       if (initial?._id) {
@@ -212,7 +213,9 @@ function PricingDialog({
                 <Label>Min nights</Label>
                 <Input
                   type="number"
-                  value={form.minNights}
+                  min={1}
+                  placeholder="Property default"
+                  value={form.minNights ?? ""}
                   onChange={(e) =>
                     setForm({ ...form, minNights: e.target.value })
                   }
@@ -222,7 +225,9 @@ function PricingDialog({
                 <Label>Max nights</Label>
                 <Input
                   type="number"
-                  value={form.maxNights}
+                  min={1}
+                  placeholder="No limit"
+                  value={form.maxNights ?? ""}
                   onChange={(e) =>
                     setForm({ ...form, maxNights: e.target.value })
                   }
@@ -496,7 +501,7 @@ export default function ItemDetailPage() {
                           {fmtCurrency(s.pricePerNight)}
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {s.minNights}–{s.maxNights}
+                          {s.minNights ?? "default"} – {s.maxNights ?? "no limit"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">

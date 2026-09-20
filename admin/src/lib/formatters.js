@@ -12,9 +12,18 @@ export const fmtCurrency = (n, currency = "USD") => {
 export const fmtNumber = (n) =>
   n == null ? "—" : Number(n).toLocaleString("en-US");
 
+// Stay dates are calendar dates ("2027-07-03", or that date at midnight UTC),
+// not moments in time. new Date() would read them as UTC and shift them back
+// a day in US time zones, so build them as local dates instead.
+const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.000)?Z)?$/;
+const parseDate = (d) => {
+  const m = typeof d === "string" ? CALENDAR_DATE.exec(d) : null;
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(d);
+};
+
 export const fmtDate = (d, pattern = "MMM d, yyyy") => {
   if (!d) return "—";
-  const v = typeof d === "string" ? new Date(d) : d;
+  const v = typeof d === "string" ? parseDate(d) : d;
   return isValid(v) ? format(v, pattern) : "—";
 };
 

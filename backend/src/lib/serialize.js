@@ -1,5 +1,7 @@
 import { normalizeMD } from "./seasonRange.js";
 
+const dateOnly = (d) => (d ? new Date(d).toISOString().slice(0, 10) : d);
+
 // The frontend and admin panel were originally built against a Mongoose/Mongo
 // API and still expect Mongo-shaped JSON (`_id`, nested nested `price`/
 // `images`/`location` objects, populated `userId`/`propertyId` sub-documents
@@ -88,8 +90,9 @@ export function serializeBooking(b) {
     bookingId: b.bookingId,
     propertyId: b.property ? serializeProperty(b.property) : b.propertyId,
     userId: b.user ? serializeUser(b.user) : null,
-    checkIn: b.checkIn,
-    checkOut: b.checkOut,
+    // Calendar dates ("YYYY-MM-DD"), not instants - see fmtDate/formatDate for why.
+    checkIn: dateOnly(b.checkIn),
+    checkOut: dateOnly(b.checkOut),
     adults: b.adults,
     children: b.children,
     infants: b.infants,

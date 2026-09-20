@@ -249,7 +249,7 @@ export async function bookedDates(req, res, next) {
       const end = new Date(b.checkOut);
       while (cursor < end) {
         dates.add(cursor.toISOString().slice(0, 10));
-        cursor.setDate(cursor.getDate() + 1);
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
     }
 

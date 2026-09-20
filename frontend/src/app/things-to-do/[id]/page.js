@@ -76,13 +76,15 @@ export default function ThingToDoDetailPage() {
 
         <section className="bg-white border border-[var(--color-border)] rounded-3xl overflow-hidden shadow-sm">
           <div className="relative h-[280px] md:h-[460px] bg-neutral-200">
-            <Image
-              src={thing.image}
-              alt={thing.name}
-              fill
-              priority
-              className="object-cover"
-            />
+            {thing.image && (
+              <Image
+                src={thing.image}
+                alt={thing.name}
+                fill
+                priority
+                className="object-cover"
+              />
+            )}
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
@@ -93,22 +95,27 @@ export default function ThingToDoDetailPage() {
 
               <h1 className="text-3xl md:text-5xl font-bold">{thing.name}</h1>
 
-              <div className="flex gap-3 text-sm text-white mt-2">
-                <MapPin className="h-5 w-5 shrink-0 mt-0.5 mb-6" />
-                <p>{thing.location?.address || "Address unavailable"}</p>
-              </div>
+              {thing.location?.address && (
+                <div className="flex gap-3 text-sm text-white mt-2">
+                  <MapPin className="h-5 w-5 shrink-0 mt-0.5 mb-6" />
+                  <p>{thing.location.address}</p>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="p-6 md:p-8 space-y-6 gap-8">
-            <div>
-              <h2 className="text-2xl font-bold mb-3">About this place</h2>
+            {thing.description && (
+              <div>
+                <h2 className="text-2xl font-bold mb-3">About this place</h2>
 
-              <p className="text-[var(--color-muted-foreground)] leading-7">
-                {thing.description}
-              </p>
-            </div>
+                <p className="text-[var(--color-muted-foreground)] leading-7 whitespace-pre-line">
+                  {thing.description}
+                </p>
+              </div>
+            )}
 
+            {thing.location?.url && (
             <aside className="rounded-3xl border border-[var(--color-border)] bg-neutral-50 p-5 h-fit">
               {/* <h3 className="font-bold text-lg mb-4">Location</h3> */}
 
@@ -150,6 +157,7 @@ export default function ThingToDoDetailPage() {
                 </Button>
               )} */}
             </aside>
+            )}
           </div>
         </section>
       </div>

@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Search } from "lucide-react";
+import { ImageIcon, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
 export default function ThingsToDoExplorer({ data }) {
   const tabs = useMemo(() => Object.keys(data), [data]);
-  const [tab, setTab] = useState(tabs[0] || "Restaurants");
+  const [tab, setTab] = useState(tabs[0] || "");
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -34,12 +34,12 @@ export default function ThingsToDoExplorer({ data }) {
 
   return (
     <Tabs value={tab} onValueChange={setTab} data-testid="things-tabs">
-      <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-3 bg-transparent p-0">
         {tabs.map((item) => (
           <TabsTrigger
             key={item}
             value={item}
-            className="w-full"
+            className="rounded-full border border-[var(--color-border)] px-5 py-2 data-[state=active]:border-transparent data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-white"
             data-testid={`tab-${item.toLowerCase().replace(/\s+/g, "-")}`}
           >
             {item}
@@ -71,8 +71,10 @@ export default function ThingsToDoExplorer({ data }) {
             </div>
           ) : (
             Object.entries(filtered).map(([area, items]) => (
-              <section key={area} className="mt-10">
-           
+              <section key={area || "_"} className="mt-10">
+                {area && (
+                  <h2 className="font-display text-2xl font-semibold text-[var(--color-primary)]">{area}</h2>
+                )}
                 <div className="mt-5 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
                   {items.map((entry) => (
                     <article
@@ -80,14 +82,20 @@ export default function ThingsToDoExplorer({ data }) {
                       className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-white transition-shadow hover:shadow-md"
                     >
                       <Link href={`/things-to-do/${entry._id}`}>
-                        <div className="relative aspect-[4/3]">
-                          <Image
-                            src={entry.image}
-                            alt={entry.name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                          />
+                        <div className="relative aspect-[4/3] bg-[var(--color-muted)]">
+                          {entry.image ? (
+                            <Image
+                              src={entry.image}
+                              alt={entry.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 50vw, 25vw"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-[var(--color-border)]">
+                              <ImageIcon className="h-10 w-10" />
+                            </div>
+                          )}
                         </div>
                         <div className="flex min-h-[56px] items-center justify-center p-3 text-center text-sm font-medium leading-tight text-[var(--color-foreground)]">
                           {entry.name}

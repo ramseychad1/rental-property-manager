@@ -8,6 +8,7 @@ import contactRoutes from "./contact.routes.js";
 import mediaRoutes from "./media.routes.js";
 import siteContentRoutes from "./siteContent.routes.js";
 import emailRoutes from "./email.routes.js";
+import thingToDoRoutes from "./thingToDo.routes.js";
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/contact", contactRoutes);
 router.use("/media", mediaRoutes);
 router.use("/site-content", siteContentRoutes);
 router.use("/email", emailRoutes);
+router.use("/thingtodo", thingToDoRoutes);
 
 export default router;

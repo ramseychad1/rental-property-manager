@@ -6,7 +6,6 @@ export default function sitemap() {
     "",
     "/properties",
     "/things-to-do",
-    "/blogs",
     "/services",
     "/rate",
     "/contact",

@@ -119,10 +119,10 @@ export const api = {
     ),
 
   // Content
-  listThingsToDo: () => request("/thingtodo"),
-  getThingToDo: (id) => request(`/thingtodo/${id}`),
-  listBlogs: (query) => request(withQuery("/blog", query)),
-  getBlog: (id) => request(`/blog/${id}`),
+  // Admins edit these and expect the public site to reflect changes immediately
+  // (same reasoning as properties above), so no data cache.
+  listThingsToDo: () => request("/thingtodo", { cache: "no-store" }),
+  getThingToDo: (id) => request(`/thingtodo/${id}`, { cache: "no-store" }),
 
   // Bookings
   listMyBookings: (userId) =>

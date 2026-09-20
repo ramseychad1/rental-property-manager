@@ -4,7 +4,6 @@ import {
   CalendarRange,
   Users,
   Settings,
-  NotebookPen,
   MapPinned,
   ListX,
   LayoutTemplate,
@@ -30,13 +29,6 @@ export const navConfig = [
     to: "/bookings",
     icon: CalendarCheck2,
     testid: "nav-bookings",
-  },
-  {
-    label: "Blogs",
-    superAdminOnly: true,
-    to: "/blogs",
-    icon: NotebookPen,
-    testid: "nav-blogs",
   },
   {
     label: "Things To Do",

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { FileText, Globe, Home, ImageIcon, Loader2, Mail, Plus, RotateCcw, Save, Trash2, Upload, Building2, Sparkles, ShieldCheck } from "lucide-react";
+import { FileText, Globe, MapPinned, Home, ImageIcon, Loader2, Mail, Plus, RotateCcw, Save, Trash2, Upload, Building2, Sparkles, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -217,6 +217,24 @@ const PROPERTIES_SECTIONS = [
   },
 ];
 
+const THINGS_SECTIONS = [
+  {
+    key: "thingsPage",
+    label: "Things to Do page",
+    description: "The banner and messages on the Things to Do page. The places themselves are managed under Things To Do in the main menu.",
+    fields: [
+      { type: "heading", label: "Banner" },
+      { name: "heading", label: "Page heading", type: "text" },
+      { name: "intro", label: "Intro text (optional)", type: "textarea", rows: 2 },
+      ...bannerFields,
+      { type: "heading", label: "Messages" },
+      { name: "emptyMessage", label: "Shown when nothing has been added yet", type: "text" },
+      { type: "heading", label: "Search engines" },
+      searchField,
+    ],
+  },
+];
+
 const SERVICES_SECTIONS = [
   {
     key: "servicesPage",
@@ -273,6 +291,7 @@ const PAGES = [
   { key: "site", label: "Site-wide", icon: Globe, hint: "Header, footer, browser tab", sections: SITE_SECTIONS },
   { key: "home", label: "Home", icon: Home, hint: "The landing page", sections: HOME_SECTIONS },
   { key: "properties", label: "Properties", icon: Building2, hint: "Listing page banner", sections: PROPERTIES_SECTIONS },
+  { key: "things", label: "Things to Do", icon: MapPinned, hint: "Local places banner", sections: THINGS_SECTIONS },
   { key: "services", label: "Services", icon: Sparkles, hint: "Optional extras", sections: SERVICES_SECTIONS },
   { key: "contact", label: "Contact", icon: Mail, hint: "Details and form", sections: CONTACT_SECTIONS },
   {

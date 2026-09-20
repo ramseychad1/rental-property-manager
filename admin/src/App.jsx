@@ -22,9 +22,6 @@ const UserListPage = lazy(() => import("@/pages/users/UserList"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
 const SiteContentPage = lazy(() => import("@/pages/siteContent/SiteContent"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
-const BlogListPage = lazy(() => import("@/pages/blog/BlogList"));
-const BlogDetailPage = lazy(() => import("@/pages/blog/BlogDetail"));
-const BlogFormPage = lazy(() => import("@/pages/blog/BlogForm"));
 const ThingsToDoList = lazy(() => import("@/pages/ThingsToDo/ThingsToDoList"));
 const ThingsToDoDetail = lazy(() => import("@/pages/ThingsToDo/ThingsToDoDetail"));
 const ThingsToDoForm = lazy(() => import("@/pages/ThingsToDo/ThingsToDoForm"));
@@ -62,12 +59,6 @@ export default function App() {
                       <Route path="new" element={<ItemFormPage mode="create" />} />
                       <Route path=":id" element={<ItemDetailPage />} />
                       <Route path=":id/edit" element={<ItemFormPage mode="edit" />} />
-                    </Route>
-                    <Route path="blogs" element={<SuperAdminRoute><Outlet /></SuperAdminRoute>}>
-                      <Route index element={<BlogListPage />} />
-                      <Route path="new" element={<BlogFormPage mode="create" />} />
-                      <Route path=":id" element={<BlogDetailPage />} />
-                      <Route path=":id/edit" element={<BlogFormPage mode="edit" />} />
                     </Route>
                     <Route path="things-to-do" element={<SuperAdminRoute><Outlet /></SuperAdminRoute>}>
                       <Route index element={<ThingsToDoList />} />

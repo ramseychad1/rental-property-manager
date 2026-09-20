@@ -33,7 +33,6 @@ import Image from "next/image";
 const NAV = [
   { href: "/properties", label: "Properties" },
   { href: "/things-to-do", label: "Things to do" },
-  { href: "/blogs", label: "Blogs" },
   { href: "/services", label: "Services" },
   { href: "/contact", label: "Contact" },
 ];

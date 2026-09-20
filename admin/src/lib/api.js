@@ -269,38 +269,6 @@ export const thingsToDoApi = {
   },
 };
 
-// Blog APIs
-export const blogsApi = {
-  list: async (params = {}) => {
-    const { data } = await http.get("/blog", { params });
-    return data?.data || [];
-  },
-
-  get: async (id) => {
-    const { data } = await http.get(`/blog/${id}`);
-    return data?.data;
-  },
-
-  create: async (formData) => {
-    const { data } = await http.post("/blog", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data?.data;
-  },
-
-  update: async (id, formData) => {
-    const { data } = await http.patch(`/blog/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data?.data;
-  },
-
-  remove: async (id) => {
-    const { data } = await http.delete(`/blog/${id}`);
-    return data;
-  },
-};
-
 // Error log APIs
 export const errorLogsApi = {
   list: async (params = {}) => {

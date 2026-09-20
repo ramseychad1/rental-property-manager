@@ -25,21 +25,20 @@ import {
 
 import { thingsToDoApi } from "@/lib/api";
 
-const CATEGORY_OPTIONS = [
-  { label: "Restaurants", value: "Restaurants" },
-  { label: "Deep sea Fishing", value: "Deep sea Fishing" },
-  { label: "Backcountry fishing", value: "Backcountry fishing" },
-  { label: "Bird watching", value: "Bird watching" },
-];
+// Category is free text; these are just suggestions alongside the ones already in use.
+const SUGGESTED_CATEGORIES = ["Restaurants", "Activities", "Outdoors", "Shopping", "Nightlife"];
 
 const schema = z.object({
-  name: z.string().min(2, "Name required"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  category: z.string().min(1, "Category required"),
-  area: z.string().min(2, "Area required"),
+  name: z.string().trim().min(1, "Name is required"),
+  description: z.string().trim().max(4000),
+  category: z.string().trim().min(1, "Category is required"),
+  area: z.string().trim().max(80),
   location: z.object({
-    address: z.string().min(5, "Address required"),
-    url: z.string().url("Must be a valid Google Maps URL"),
+    address: z.string().trim().max(200),
+    url: z
+      .string()
+      .trim()
+      .refine((v) => v === "" || /^https?:\/\//i.test(v), "Must start with http:// or https://"),
   }),
   status: z.enum(["active", "inactive"]),
 });
@@ -51,7 +50,13 @@ export default function ThingsToDoForm({ mode = "create" }) {
 
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState(null);
-  const [categoryKey, setCategoryKey] = useState("init");
+  const { data: allItems } = useQuery({
+    queryKey: ["things-to-do", "all"],
+    queryFn: () => thingsToDoApi.list({}),
+  });
+  const categorySuggestions = [
+    ...new Set([...(allItems || []).map((t) => t.category), ...SUGGESTED_CATEGORIES].filter(Boolean)),
+  ].sort();
 
   const { data: existing, isLoading } = useQuery({
     queryKey: ["things-to-do", id],
@@ -95,7 +100,6 @@ export default function ThingsToDoForm({ mode = "create" }) {
         status: existing.status || "active",
       });
 
-      setCategoryKey(existing._id);
       setImageUrl(existing.image || "");
     }
   }, [existing, reset]);
@@ -126,11 +130,6 @@ export default function ThingsToDoForm({ mode = "create" }) {
   });
 
   const onSubmit = (values) => {
-    if (mode === "create" && !imageFile) {
-      toast.error("Image is required");
-      return;
-    }
-
     const fd = new FormData();
 
     fd.append("name", values.name);
@@ -227,25 +226,17 @@ export default function ThingsToDoForm({ mode = "create" }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select
-                    key={categoryKey}
-                    value={watch("category")}
-                    onValueChange={(v) =>
-                      setValue("category", v, { shouldValidate: true })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="select category" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      {CATEGORY_OPTIONS.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    {...register("category")}
+                    list="things-categories"
+                    placeholder="Pick or type a category"
+                    autoComplete="off"
+                  />
+                  <datalist id="things-categories">
+                    {categorySuggestions.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
 
                   {errors.category && (
                     <p className="text-xs text-destructive">
@@ -258,7 +249,7 @@ export default function ThingsToDoForm({ mode = "create" }) {
                   <Label>Area</Label>
                   <Input
                     {...register("area")}
-                    placeholder="Miami, Key Largo, Everglades"
+                    placeholder="Downtown, Waterfront (optional; groups items on the page)"
                   />
                   {errors.area && (
                     <p className="text-xs text-destructive">
@@ -278,7 +269,7 @@ export default function ThingsToDoForm({ mode = "create" }) {
               </div>
 
               <div className="space-y-2">
-                <Label>Address</Label>
+                <Label>Address (optional)</Label>
                 <Input
                   {...register("location.address")}
                   placeholder="401 Biscayne Blvd, Miami, FL"
@@ -291,7 +282,7 @@ export default function ThingsToDoForm({ mode = "create" }) {
               </div>
 
               <div className="space-y-2">
-                <Label>Google Maps URL</Label>
+                <Label>Google Maps link (optional)</Label>
                 <Input
                   {...register("location.url")}
                   placeholder="https://www.google.com/maps/place/..."
@@ -319,9 +310,9 @@ export default function ThingsToDoForm({ mode = "create" }) {
                 hint="Main image for this thing to do"
               />
 
-              {mode === "create" && !imageFile && (
+              {!imageUrl && (
                 <p className="text-xs text-muted-foreground">
-                  Image is required for new item.
+                  A photo is optional, but places with photos look better on the site.
                 </p>
               )}
             </Card>

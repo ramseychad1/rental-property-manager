@@ -47,13 +47,6 @@ const STATUS_OPTIONS = [
   { label: "Inactive", value: "inactive" },
 ];
 
-const CATEGORY_OPTIONS = [
-  "Restaurants",
-  "Deep sea Fishing",
-  "Backcountry fishing",
-  "Bird watching",
-];
-
 export default function ThingsToDoList() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -74,6 +67,16 @@ export default function ThingsToDoList() {
       }),
     keepPreviousData: true,
   });
+
+  // Categories are free text now, so build the filter from what exists.
+  const { data: everything } = useQuery({
+    queryKey: ["things-to-do", "all"],
+    queryFn: () => thingsToDoApi.list({}),
+  });
+  const CATEGORY_OPTIONS = useMemo(
+    () => [...new Set((everything || []).map((t) => t.category).filter(Boolean))].sort(),
+    [everything],
+  );
 
   const remove = useMutation({
     mutationFn: (id) => thingsToDoApi.remove(id),

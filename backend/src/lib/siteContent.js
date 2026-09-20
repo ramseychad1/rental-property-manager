@@ -136,6 +136,13 @@ export const SECTION_SCHEMAS = {
     successMessage: text(200),
     metaDescription: text(300),
   }),
+  thingsPage: z.object({
+    heading: text(120),
+    intro: text(400),
+    ...bannerColors,
+    emptyMessage: text(200),
+    metaDescription: text(300),
+  }),
   privacyPage: policySchema,
   refundPage: policySchema,
 };
@@ -276,6 +283,14 @@ export const SECTION_DEFAULTS = {
     mapQuery: "",
     successMessage: "Thanks! We'll be in touch soon.",
     metaDescription: "Contact us with questions about a stay.",
+  },
+  thingsPage: {
+    heading: "Things to do nearby",
+    intro: "Our favorite local spots, sorted by the kind of day you want.",
+    backgroundColor: "#0b7c83",
+    textColor: "#ffffff",
+    emptyMessage: "Nothing has been added yet. Check back soon.",
+    metaDescription: "Local restaurants, activities and favorites near our rentals.",
   },
   privacyPage: {
     title: "Privacy Policy",

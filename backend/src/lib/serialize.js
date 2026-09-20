@@ -118,3 +118,18 @@ export function serializeBooking(b) {
     updatedAt: b.updatedAt,
   };
 }
+
+export function serializeThingToDo(t) {
+  if (!t) return null;
+  return {
+    _id: t.id,
+    name: t.name,
+    description: t.description ?? "",
+    category: t.category,
+    area: t.area ?? "",
+    location: { address: t.locationAddress ?? "", url: t.locationUrl ?? "" },
+    image: t.imageUrl ?? "",
+    status: t.status,
+    createdAt: t.createdAt,
+  };
+}

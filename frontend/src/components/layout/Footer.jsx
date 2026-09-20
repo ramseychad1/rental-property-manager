@@ -49,14 +49,6 @@ export default function Footer({ brand }) {
             </li>
             <li>
               <Link
-                href="/blogs"
-                className="hover:text-[var(--color-primary)]"
-              >
-                Blogs
-              </Link>
-            </li>
-            <li>
-              <Link
                 href="/properties"
                 className="hover:text-[var(--color-primary)]"
               >

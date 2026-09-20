@@ -230,3 +230,22 @@ model EmailLog {
 
   @@index([createdAt])
 }
+
+// A local attraction / restaurant / activity shown on the public "Things to do"
+// page. Complex-wide (not per owner); managed by Super Admins. Category and area
+// are free text - the public page groups by whatever exists.
+model ThingToDo {
+  id              String   @id @default(cuid())
+  name            String
+  description     String   @default("")
+  category        String
+  area            String   @default("")
+  locationAddress String   @default("")
+  locationUrl     String   @default("")
+  imageUrl        String   @default("")
+  status          String   @default("active") // "active" | "inactive"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+}

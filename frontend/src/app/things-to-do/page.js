@@ -1,12 +1,15 @@
 import { api } from "@/services/api";
+import { getBrand, pageTitle } from "@/lib/getSiteContent";
 import { thingsToDoData } from "@/data/thingsToDo";
 import ThingsToDoExplorer from "@/components/things-to-do/ThingsToDoExplorer";
 
-export const metadata = {
-  title: "Things To Do in Surfside Beach, SC | Rental Property Manager",
-  description:
-    "Explore restaurants, fishing, bird watching, and local Surfside Beach, SC favorites near Rental Property Manager vacation rentals.",
-};
+export async function generateMetadata() {
+  const brand = await getBrand();
+  return {
+    title: pageTitle("Things To Do", brand),
+    description: `Explore restaurants, activities and local favorites near ${brand.siteName} vacation rentals.`,
+  };
+}
 
 function groupThingsToDo(items) {
   if (!Array.isArray(items) || items.length === 0) return thingsToDoData;

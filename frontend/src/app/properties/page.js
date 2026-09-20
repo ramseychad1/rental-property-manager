@@ -1,12 +1,22 @@
-import { Star, ShieldCheck, Headphones } from "lucide-react";
 import PropertyCard from "@/components/property/PropertyCard";
 import { api } from "@/services/api";
+import { getIcon } from "@/lib/homeIcons";
+import { getSiteContent, getBrand, pageTitle } from "@/lib/getSiteContent";
 
-export const metadata = {
-  title: "Surfside Beach, SC Vacation Rentals | Rental Property Manager",
-  description:
-    "Browse handpicked Surfside Beach, SC vacation homes with private docks, ocean access, and local concierge support.",
+const DEFAULTS = {
+  headline: "Find your perfect stay",
+  backgroundColor: "#0b7c83",
+  textColor: "#ffffff",
+  features: [],
+  emptyMessage: "No properties available right now. Check back soon.",
+  metaDescription: "",
 };
+
+export async function generateMetadata() {
+  const [content, brand] = await Promise.all([getSiteContent(), getBrand()]);
+  const page = { ...DEFAULTS, ...(content?.propertiesPage ?? {}) };
+  return { title: pageTitle("Properties", brand), description: page.metaDescription || undefined };
+}
 
 async function getProperties() {
   try {
@@ -22,23 +32,26 @@ async function getProperties() {
 }
 
 export default async function PropertiesPage() {
-  const { properties, error } = await getProperties();
+  const [{ properties, error }, content] = await Promise.all([getProperties(), getSiteContent()]);
+  const page = { ...DEFAULTS, ...(content?.propertiesPage ?? {}) };
 
   return (
     <div>
       <section
-        className="bg-[var(--color-primary)] text-white"
+        style={{ backgroundColor: page.backgroundColor, color: page.textColor }}
         data-testid="properties-banner"
       >
         <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 py-12 lg:grid-cols-[1.2fr_1fr]">
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            Find your slice of paradise
+            {page.headline}
           </h1>
-          <ul className="grid grid-cols-1 gap-6 text-sm sm:grid-cols-3">
-            <Feat Icon={Star} title="Handpicked" sub="Only the best stays" />
-            <Feat Icon={ShieldCheck} title="Stress Free" sub="Easy booking" />
-            <Feat Icon={Headphones} title="Local Support" sub="Here for you" />
-          </ul>
+          {page.features.length > 0 && (
+            <ul className="grid grid-cols-1 gap-6 text-sm sm:grid-cols-3">
+              {page.features.map((f, i) => (
+                <Feat key={i} Icon={getIcon(f.icon)} title={f.title} sub={f.subtitle} />
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 
@@ -51,7 +64,7 @@ export default async function PropertiesPage() {
         {properties.length === 0 ? (
           <div className="py-20 text-center">
             <p className="text-lg text-[var(--color-muted-foreground)]">
-              No properties available right now. Check back soon.
+              {page.emptyMessage}
             </p>
           </div>
         ) : (
@@ -74,7 +87,7 @@ function Feat({ Icon, title, sub }) {
       </span>
       <div>
         <div className="font-semibold">{title}</div>
-        <div className="text-white/85">{sub}</div>
+        <div className="opacity-85">{sub}</div>
       </div>
     </li>
   );

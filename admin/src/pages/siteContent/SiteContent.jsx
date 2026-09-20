@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImageIcon, Loader2, Plus, RotateCcw, Save, Trash2, Upload } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { FileText, Globe, Home, ImageIcon, Loader2, Mail, Plus, RotateCcw, Save, Trash2, Upload, Building2, Sparkles, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { siteContentApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 // Keep in sync with frontend/src/lib/homeIcons.js
 const ICON_OPTIONS = [
@@ -28,7 +30,7 @@ const iconItemFields = [
 
 // Field config drives the whole form. Section keys match the backend
 // (backend/src/lib/siteContent.js).
-const SECTIONS = [
+const HOME_SECTIONS = [
   {
     key: "hero",
     label: "Hero",
@@ -125,6 +127,161 @@ const SECTIONS = [
       { name: "items", label: "Items", type: "list", max: 4, addLabel: "Add item",
         newItem: { title: "", subtitle: "", icon: "Star" }, itemFields: iconItemFields },
     ],
+  },
+];
+
+// Shared field groups
+const bannerFields = [
+  { name: "backgroundColor", label: "Banner background color", type: "color" },
+  { name: "textColor", label: "Banner text color", type: "color" },
+];
+const searchField = {
+  name: "metaDescription",
+  label: "Search engine description (shown under the page title in Google results)",
+  type: "textarea",
+  rows: 2,
+};
+const policyFields = [
+  { name: "title", label: "Page title", type: "text" },
+  { name: "lastUpdated", label: 'Last updated (shown as "Last updated: ...")', type: "text" },
+  { type: "note", label: "Blank line = new paragraph. Web addresses (https://...) become clickable links. Have this text reviewed by counsel before relying on it." },
+  {
+    name: "sections", label: "Sections", type: "list", max: 30, addLabel: "Add section",
+    newItem: { title: "", body: "" },
+    itemFields: [
+      { name: "title", label: "Section heading", type: "text" },
+      { name: "body", label: "Text", type: "textarea", rows: 8 },
+    ],
+  },
+  { type: "heading", label: "Search engines" },
+  searchField,
+];
+
+// Content that appears across the whole site.
+const SITE_SECTIONS = [
+  {
+    key: "brand",
+    label: "Contact & branding",
+    description: "Your name, tagline and contact details. They appear in the header bar, the footer and the Contact page. Anything left blank is hidden.",
+    fields: [
+      { type: "heading", label: "Site identity" },
+      { name: "siteName", label: "Site name (browser tab, page titles, footer)", type: "text" },
+      { name: "tagline", label: "Tagline (footer)", type: "text" },
+      { type: "heading", label: "Contact details" },
+      { name: "phone", label: "Phone", type: "text" },
+      { name: "email", label: "Email", type: "text" },
+      { name: "address", label: "Address (footer)", type: "text" },
+      { type: "heading", label: "Social links (full web addresses; blank hides the icon)" },
+      { name: "facebook", label: "Facebook", type: "text" },
+      { name: "instagram", label: "Instagram", type: "text" },
+      { name: "tiktok", label: "TikTok", type: "text" },
+      { name: "x", label: "X (Twitter)", type: "text" },
+    ],
+  },
+  {
+    key: "seo",
+    label: "Search & sharing",
+    description: "How the site appears in Google results and when someone shares a link.",
+    fields: [
+      { name: "title", label: "Site title", type: "text" },
+      { name: "description", label: "Site description", type: "textarea", rows: 2 },
+      { name: "keywords", label: "Keywords (comma separated, optional)", type: "text" },
+      { name: "shareImage", label: "Sharing image (defaults to the homepage hero image)", type: "image" },
+    ],
+  },
+];
+
+const PROPERTIES_SECTIONS = [
+  {
+    key: "propertiesPage",
+    label: "Properties page",
+    description: "The banner at the top of the Properties page. The properties themselves are managed under Properties.",
+    fields: [
+      { type: "heading", label: "Banner" },
+      { name: "headline", label: "Headline", type: "text" },
+      ...bannerFields,
+      {
+        name: "features", label: "Highlights beside the headline", type: "list", max: 4, addLabel: "Add highlight",
+        newItem: { title: "", subtitle: "", icon: "Star" },
+        itemFields: [
+          { name: "title", label: "Title", type: "text" },
+          { name: "subtitle", label: "Subtitle", type: "text" },
+          { name: "icon", label: "Icon", type: "icon" },
+        ],
+      },
+      { type: "heading", label: "Messages" },
+      { name: "emptyMessage", label: "Shown when there are no properties", type: "text" },
+      { type: "heading", label: "Search engines" },
+      searchField,
+    ],
+  },
+];
+
+const SERVICES_SECTIONS = [
+  {
+    key: "servicesPage",
+    label: "Services page",
+    description: "Optional extras guests can add to a stay, such as a chef or a tour.",
+    fields: [
+      { type: "heading", label: "Banner" },
+      { name: "heading", label: "Page heading", type: "text" },
+      { name: "intro", label: "Intro text (optional)", type: "textarea", rows: 2 },
+      ...bannerFields,
+      { type: "heading", label: "Services" },
+      {
+        name: "services", label: "Services", type: "list", max: 30, addLabel: "Add service",
+        newItem: { title: "", image: "", price: 0, priceNote: "", shortDescription: "", description: "" },
+        itemFields: [
+          { name: "title", label: "Name", type: "text" },
+          { name: "price", label: "Price ($)", type: "number" },
+          { name: "priceNote", label: "Price note (e.g. per stay)", type: "text" },
+          { name: "image", label: "Photo", type: "image" },
+          { name: "shortDescription", label: "Short description (shown first)", type: "textarea", rows: 2 },
+          { name: "description", label: "Full description (shown after View more)", type: "textarea", rows: 4 },
+        ],
+      },
+      { type: "heading", label: "Search engines" },
+      searchField,
+    ],
+  },
+];
+
+const CONTACT_SECTIONS = [
+  {
+    key: "contactPage",
+    label: "Contact page",
+    description: "The Contact page. Phone and email come from Site-wide > Contact & branding.",
+    fields: [
+      { type: "heading", label: "Banner" },
+      { name: "heading", label: "Page heading", type: "text" },
+      { name: "intro", label: "Intro text", type: "textarea", rows: 2 },
+      ...bannerFields,
+      { type: "heading", label: "Location" },
+      { name: "locationLabel", label: "Location text (blank hides it)", type: "text" },
+      { name: "mapQuery", label: "Map location: an address or place name (blank hides the map)", type: "text" },
+      { type: "heading", label: "Contact form" },
+      { name: "successMessage", label: "Message shown after someone sends the form", type: "text" },
+      { type: "heading", label: "Search engines" },
+      searchField,
+    ],
+  },
+];
+
+// Left menu, in the same order as the public site's navigation. A page with
+// several sections gets tabs; a single-section page is one form.
+const PAGES = [
+  { key: "site", label: "Site-wide", icon: Globe, hint: "Header, footer, browser tab", sections: SITE_SECTIONS },
+  { key: "home", label: "Home", icon: Home, hint: "The landing page", sections: HOME_SECTIONS },
+  { key: "properties", label: "Properties", icon: Building2, hint: "Listing page banner", sections: PROPERTIES_SECTIONS },
+  { key: "services", label: "Services", icon: Sparkles, hint: "Optional extras", sections: SERVICES_SECTIONS },
+  { key: "contact", label: "Contact", icon: Mail, hint: "Details and form", sections: CONTACT_SECTIONS },
+  {
+    key: "privacy", label: "Privacy Policy", icon: ShieldCheck, hint: "Legal text",
+    sections: [{ key: "privacyPage", label: "Privacy Policy", description: "Your privacy policy page.", fields: policyFields }],
+  },
+  {
+    key: "refund", label: "Refund Policy", icon: FileText, hint: "Legal text",
+    sections: [{ key: "refundPage", label: "Refund Policy", description: "Your refund and cancellation policy page.", fields: policyFields }],
   },
 ];
 
@@ -230,6 +387,18 @@ const drop = (arr, i) => arr.filter((_, idx) => idx !== i);
 function Field({ field, value, onChange }) {
   const { type, label } = field;
   switch (type) {
+    case "heading":
+      return <h4 className="font-display text-base font-semibold pt-3 border-t first:border-t-0 first:pt-0">{label}</h4>;
+    case "note":
+      return <p className="text-xs text-muted-foreground -mt-2">{label}</p>;
+    case "number":
+      return (
+        <div className="space-y-1.5">
+          <Label>{label}</Label>
+          <Input type="number" min={0} value={value ?? 0} className="w-40"
+            onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))} />
+        </div>
+      );
     case "text":
       return (
         <div className="space-y-1.5">
@@ -307,7 +476,7 @@ function Field({ field, value, onChange }) {
             <div key={i} className="rounded-lg border p-3 flex gap-2 items-start">
               <div className="flex-1 grid gap-3 sm:grid-cols-2">
                 {field.itemFields.map((f) => (
-                  <div key={f.name} className={f.type === "textarea" ? "sm:col-span-2" : ""}>
+                  <div key={f.name} className={f.type === "textarea" || f.type === "image" ? "sm:col-span-2" : ""}>
                     <Field field={f} value={item[f.name]}
                       onChange={(v) => onChange(move(list, i, { ...item, [f.name]: v }))} />
                   </div>
@@ -367,8 +536,8 @@ function SectionEditor({ section, saved }) {
     <Card className="p-5 sm:p-6 space-y-6">
       <p className="text-sm text-muted-foreground">{section.description}</p>
       <div className="grid gap-5">
-        {section.fields.map((f) => (
-          <Field key={f.name} field={f} value={draft[f.name]}
+        {section.fields.map((f, i) => (
+          <Field key={f.name ?? `${f.type}-${i}`} field={f} value={draft[f.name]}
             onChange={(v) => setDraft((d) => ({ ...d, [f.name]: v }))} />
         ))}
       </div>
@@ -385,33 +554,80 @@ function SectionEditor({ section, saved }) {
   );
 }
 
+const NO_DATA = {};
+
+function PageEditor({ page, data }) {
+  const [tab, setTab] = useState(page.sections[0].key);
+  // Reset to the first tab when switching pages.
+  useEffect(() => setTab(page.sections[0].key), [page]);
+
+  if (page.sections.length === 1) {
+    const section = page.sections[0];
+    return <SectionEditor section={section} saved={data[section.key] ?? NO_DATA} />;
+  }
+  return (
+    <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+      <TabsList className="h-auto flex-wrap justify-start">
+        {page.sections.map((s) => <TabsTrigger key={s.key} value={s.key}>{s.label}</TabsTrigger>)}
+      </TabsList>
+      {page.sections.map((s) => (
+        <TabsContent key={s.key} value={s.key}>
+          <SectionEditor section={s} saved={data[s.key] ?? NO_DATA} />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
 export default function SiteContentPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["site-content"],
     queryFn: siteContentApi.get,
   });
+  // The selected page lives in the URL (?page=contact) so a refresh keeps your place.
+  const [params, setParams] = useSearchParams();
+  const page = PAGES.find((p) => p.key === params.get("page")) ?? PAGES[0];
 
   return (
     <div className="p-5 md:p-8">
       <PageHeader
         title="Site Content"
-        subtitle="Edit the text, images and colors on the public homepage. Changes appear as soon as you save a section."
+        subtitle="Edit the text, images and colors on the public website. Each page below matches a page on the site. Changes appear as soon as you save a section, so save before switching to another one."
       />
       {isLoading ? (
         <Skeleton className="h-[420px] w-full rounded-xl" />
       ) : error || !data ? (
         <p className="text-sm text-destructive">Could not load site content.</p>
       ) : (
-        <Tabs defaultValue={SECTIONS[0].key} className="space-y-4">
-          <TabsList className="h-auto flex-wrap justify-start">
-            {SECTIONS.map((s) => <TabsTrigger key={s.key} value={s.key}>{s.label}</TabsTrigger>)}
-          </TabsList>
-          {SECTIONS.map((s) => (
-            <TabsContent key={s.key} value={s.key}>
-              <SectionEditor section={s} saved={data[s.key]} />
-            </TabsContent>
-          ))}
-        </Tabs>
+        <div className="grid gap-6 md:grid-cols-[220px_1fr] items-start">
+          <nav aria-label="Site pages" className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible md:sticky md:top-20 pb-1">
+            {PAGES.map((p) => {
+              const active = p.key === page.key;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setParams({ page: p.key })}
+                  data-testid={`site-page-${p.key}`}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors shrink-0",
+                    active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60",
+                  )}
+                >
+                  <p.icon className="w-4 h-4 shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium leading-tight">{p.label}</span>
+                    <span className="hidden md:block text-xs text-muted-foreground truncate">{p.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="min-w-0">
+            <PageEditor page={page} data={data} />
+          </div>
+        </div>
       )}
     </div>
   );

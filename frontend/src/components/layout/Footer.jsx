@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Facebook, Instagram, Mail, Phone } from "lucide-react";
+import { Facebook, Instagram, Mail, MapPin, Phone } from "lucide-react";
 import Image from "next/image";
+import { telHref } from "@/lib/getSiteContent";
 
-export default function Footer() {
+export default function Footer({ brand }) {
   return (
     <footer
       className="border-t border-[var(--color-border)] bg-white"
@@ -13,16 +14,16 @@ export default function Footer() {
           <Link href="/">
             <Image
               src="/logo.png"
-              alt="Logo"
+              alt={brand.siteName}
               width={440}
               height={289}
               priority
               className="h-24 w-auto"
             />
           </Link>
-          <p className="mt-5 text-sm text-[var(--color-muted-foreground)] max-w-xs">
-            We kaboom your beauty holiday instantly and memorable.
-          </p>
+          {brand.tagline && (
+            <p className="mt-5 text-sm text-[var(--color-muted-foreground)] max-w-xs">{brand.tagline}</p>
+          )}
         </div>
 
         <div>
@@ -88,32 +89,49 @@ export default function Footer() {
             Contact Us
           </h4>
           <ul className="space-y-3 text-sm text-[var(--color-foreground)]">
-            <li className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-[var(--color-primary)]" />{" "}
-              +17864848484
-            </li>
-            <li className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-[var(--color-primary)]" />{" "}
-              cfonte7@icloud.com
-            </li>
+            {brand.phone && (
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-[var(--color-primary)]" />{" "}
+                <a href={telHref(brand.phone)} className="hover:text-[var(--color-primary)]">{brand.phone}</a>
+              </li>
+            )}
+            {brand.email && (
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-[var(--color-primary)]" />{" "}
+                <a href={`mailto:${brand.email}`} className="hover:text-[var(--color-primary)]">{brand.email}</a>
+              </li>
+            )}
+            {brand.address && (
+              <li className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-[var(--color-primary)]" /> {brand.address}
+              </li>
+            )}
           </ul>
-          <div className="mt-5 flex items-center gap-3 text-[var(--color-foreground)]">
-            <a aria-label="Facebook" href="#" className="hover:opacity-80">
-              <Facebook className="h-5 w-5" />
-            </a>
-            <a aria-label="Instagram" href="#" className="hover:opacity-80">
-              <Instagram className="h-5 w-5" />
-            </a>
-            <a aria-label="X" href="#" className="hover:opacity-80">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-                <path d="M18.244 2H21l-6.52 7.46L22 22h-6.91l-4.82-6.38L4.8 22H2l7-8L2.5 2h7.05l4.35 5.83L18.244 2zm-2.43 18h1.76L7.26 4H5.38l10.43 16z" />
-              </svg>
-            </a>
-          </div>
+          {(brand.facebook || brand.instagram || brand.x) && (
+            <div className="mt-5 flex items-center gap-3 text-[var(--color-foreground)]">
+              {brand.facebook && (
+                <a aria-label="Facebook" href={brand.facebook} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
+                  <Facebook className="h-5 w-5" />
+                </a>
+              )}
+              {brand.instagram && (
+                <a aria-label="Instagram" href={brand.instagram} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
+                  <Instagram className="h-5 w-5" />
+                </a>
+              )}
+              {brand.x && (
+                <a aria-label="X" href={brand.x} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                    <path d="M18.244 2H21l-6.52 7.46L22 22h-6.91l-4.82-6.38L4.8 22H2l7-8L2.5 2h7.05l4.35 5.83L18.244 2zm-2.43 18h1.76L7.26 4H5.38l10.43 16z" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className=" py-2 text-center bg-[var(--color-teal-top)] text-white font-semibold">
-        Copyright {new Date().getFullYear()} &middot; All Rights Reserved
+        Copyright {new Date().getFullYear()} {brand.siteName} &middot; All Rights Reserved
       </div>
     </footer>
   );

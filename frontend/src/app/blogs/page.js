@@ -2,14 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, Tag } from "lucide-react";
 import { api } from "@/services/api";
+import { getBrand, pageTitle } from "@/lib/getSiteContent";
 
 export const revalidate = 300;
 
-export const metadata = {
-  title: "Surfside Beach, SC Travel Blog | Rental Property Manager",
-  description:
-    "Travel notes, local tips, and stay-planning ideas for Surfside Beach, SC vacation guests.",
-};
+export async function generateMetadata() {
+  const brand = await getBrand();
+  return {
+    title: pageTitle("Blog", brand),
+    description: `Travel notes, local tips and stay-planning ideas from ${brand.siteName}.`,
+  };
+}
 
 async function getBlogs() {
   try {

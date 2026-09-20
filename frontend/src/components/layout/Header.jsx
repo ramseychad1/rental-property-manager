@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { telHref } from "@/lib/getSiteContent";
 import Image from "next/image";
 
 const NAV = [
@@ -37,7 +38,7 @@ const NAV = [
   { href: "/contact", label: "Contact" },
 ];
 
-export default function Header() {
+export default function Header({ brand }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, loading } = useAuth();
@@ -65,34 +66,37 @@ export default function Header() {
       >
         <div className="mx-auto max-w-7xl px-5 h-10 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <a
-              href="tel:+13052656226"
-              className="flex items-center gap-2 hover:opacity-90"
-            >
-              <Phone className="h-4 w-4" />
-              305.265.6226
-            </a>
-
-            <a
-              href="mailto:hello@rentalpropertymanager.com"
-              className="hidden sm:flex items-center gap-2 hover:opacity-90"
-            >
-              <Mail className="h-4 w-4" />
-              hello@rentalpropertymanager.com
-            </a>
+            {brand.phone && (
+              <a href={telHref(brand.phone)} className="flex items-center gap-2 hover:opacity-90">
+                <Phone className="h-4 w-4" />
+                {brand.phone}
+              </a>
+            )}
+            {brand.email && (
+              <a href={`mailto:${brand.email}`} className="hidden sm:flex items-center gap-2 hover:opacity-90">
+                <Mail className="h-4 w-4" />
+                {brand.email}
+              </a>
+            )}
           </div>
           <div className="flex items-center gap-4">
-            <a href="#" aria-label="Instagram" className="hover:opacity-90">
-              <Instagram className="h-4 w-4" />
-            </a>
-            <a href="#" aria-label="Facebook" className="hover:opacity-90">
-              <Facebook className="h-4 w-4" />
-            </a>
-            <a href="#" aria-label="TikTok" className="hover:opacity-90">
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-                <path d="M16 3v3.2a5.8 5.8 0 0 0 4 1.6v3.1c-1.5 0-2.9-.4-4-1.2v6.5A6 6 0 1 1 10 10v3.2a3 3 0 1 0 3 3V3h3z" />
-              </svg>
-            </a>
+            {brand.instagram && (
+              <a href={brand.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:opacity-90">
+                <Instagram className="h-4 w-4" />
+              </a>
+            )}
+            {brand.facebook && (
+              <a href={brand.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:opacity-90">
+                <Facebook className="h-4 w-4" />
+              </a>
+            )}
+            {brand.tiktok && (
+              <a href={brand.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:opacity-90">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                  <path d="M16 3v3.2a5.8 5.8 0 0 0 4 1.6v3.1c-1.5 0-2.9-.4-4-1.2v6.5A6 6 0 1 1 10 10v3.2a3 3 0 1 0 3 3V3h3z" />
+                </svg>
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -103,7 +107,7 @@ export default function Header() {
           <Link href="/">
             <Image
               src="/logo.png"
-              alt="Logo"
+              alt={brand.siteName}
               width={440}
               height={289}
               priority
@@ -247,7 +251,7 @@ export default function Header() {
             <Link href="/" onClick={() => setMobileOpen(false)}>
               <Image
                 src="/logo.png"
-                alt="Logo"
+                alt={brand.siteName}
                 width={440}
                 height={289}
                 className="h-12 w-auto"

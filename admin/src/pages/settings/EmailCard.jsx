@@ -16,11 +16,18 @@ const RETURN_MESSAGES = {
 };
 
 export default function EmailCard() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
+  // The API blocks everything but the password change until the temporary
+  // password has been replaced, so don't even ask for the status yet.
+  const mustChangePassword = Boolean(user?.mustChangePassword);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(null); // "connect" | "test" | "disconnect"
 
-  const { data, isLoading } = useQuery({ queryKey: ["email-status"], queryFn: emailApi.status });
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["email-status"],
+    queryFn: emailApi.status,
+    enabled: !mustChangePassword,
+  });
 
   // Report the result of the Google round trip once, then tidy the URL.
   useEffect(() => {
@@ -80,8 +87,18 @@ export default function EmailCard() {
         </p>
       </div>
 
-      {isLoading ? (
+      {mustChangePassword ? (
+        <div className="text-sm text-muted-foreground flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+          Set your own password first (the Change password card), then you can connect Gmail here.
+        </div>
+      ) : isLoading ? (
         <div className="text-sm text-muted-foreground">Checking…</div>
+      ) : isError ? (
+        <div className="text-sm text-muted-foreground flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          Couldn't load your email settings. Refresh the page to try again.
+        </div>
       ) : !data?.configured ? (
         <div className="text-sm text-muted-foreground flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />

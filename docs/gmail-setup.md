@@ -1,4 +1,4 @@
-# Setting up Gmail sending
+cale# Setting up Gmail sending
 
 The app sends email through each owner's own Gmail (Gmail API, "send email" permission only). A SuperAdmin's connected Gmail is the **system sender** for signup codes, password resets and the contact form, and covers owners who haven't connected. With nothing connected, messages are only logged to the backend console.
 

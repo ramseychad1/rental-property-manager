@@ -142,3 +142,15 @@ export function testEmail(address) {
     }),
   };
 }
+
+export function credentialsEmail({ name, loginUrl, email, tempPassword, reset }) {
+  return {
+    subject: reset ? "Your Rental Property Manager password was reset" : "Your Rental Property Manager account",
+    ...layout({
+      heading: reset ? "Your password was reset" : "Your account is ready",
+      intro: `Hi ${esc(name)}, ${reset ? "your password was reset by an administrator." : "an administrator created an account for you."} Sign in with the details below. You'll be asked to choose your own password the first time.`,
+      rows: [["Login URL", loginUrl], ["User ID", email], ["Temporary password", tempPassword]],
+      outro: "The temporary password stops working once you set your own. If you weren't expecting this email, you can ignore it.",
+    }),
+  };
+}

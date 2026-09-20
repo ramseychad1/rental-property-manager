@@ -82,6 +82,7 @@ export function getSystemConnection() {
  * @param {string} [m.fromName] display name; defaults to the connected user's name
  * @param {boolean} [m.systemOnly] never use an owner's connection (signup codes, ...)
  * @param {boolean} [m.strict]  only use ownerId's own connection, no fallback (test email)
+ * @param {boolean} [m.redact]  keep the body out of console output (temporary passwords)
  * @param {string} [m.bookingId]
  * @returns {Promise<{ok: boolean, status: string, via?: string, error?: string}>}
  */
@@ -102,13 +103,13 @@ export async function sendMail(m) {
       const c = candidates[0];
       const from = c ? { name: m.fromName || c.user.name, address: c.email } : "dry-run@localhost";
       const raw = await buildRaw({ from, to: m.to, replyTo: m.replyTo, subject: m.subject, html: m.html, text: m.text });
-      console.log(`\n[EMAIL DRY RUN] ${m.kind} via ${c?.email || "(no sender)"}\n${raw.toString()}\n`);
+      console.log(`\n[EMAIL DRY RUN] ${m.kind} via ${c?.email || "(no sender)"}\n${m.redact ? "(body redacted)" : raw.toString()}\n`);
       await log({ ...base, status: "skipped", error: "dry run", connectionId: c?.id });
       return { ok: true, status: "skipped", via: c?.email };
     }
 
     if (candidates.length === 0) {
-      console.log(`\n[EMAIL] no Gmail connected - not sent. ${m.kind} to ${m.to}: ${m.subject}\n${m.text}\n`);
+      console.log(`\n[EMAIL] no Gmail connected - not sent. ${m.kind} to ${m.to}: ${m.subject}\n${m.redact ? "(body redacted)" : m.text}\n`);
       await log({ ...base, status: "skipped", error: "no connected sender" });
       return { ok: false, status: "skipped", error: "No Gmail account is connected." };
     }

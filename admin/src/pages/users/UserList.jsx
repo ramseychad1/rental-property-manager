@@ -88,7 +88,7 @@ export default function UserListPage() {
     setBusy(true);
     try {
       const result = await usersApi.resetPassword(u.id);
-      setCreds({ credentials: result.credentials, name: u.name, reset: true });
+      setCreds({ credentials: result.credentials, name: u.name, userId: u.id, reset: true });
       refreshUsers();
     } catch (err) {
       toast.error(err.normalizedMessage || "Could not reset password");
@@ -367,15 +367,17 @@ export default function UserListPage() {
         onOpenChange={setAddOpen}
         onCreated={(result) => {
           setAddOpen(false);
-          setCreds({ credentials: result.credentials, name: result.user.name, reset: false });
+          setCreds({ credentials: result.credentials, name: result.user.name, userId: result.user.id, reset: false });
           refreshUsers();
         }}
       />
       <CredentialsDialog
+        key={creds?.credentials?.tempPassword}
         open={!!creds}
         onOpenChange={(v) => !v && setCreds(null)}
         credentials={creds?.credentials}
         name={creds?.name}
+        userId={creds?.userId}
         reset={creds?.reset}
       />
       <ConfirmDialog

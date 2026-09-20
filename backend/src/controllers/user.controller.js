@@ -7,6 +7,8 @@ import { COOKIE_NAME, cookieOptions } from "../lib/jwt.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { isSuperAdmin } from "../lib/access.js";
 import { generateTempPassword } from "../lib/tempPassword.js";
+import { sendMail } from "../lib/mailer.js";
+import { credentialsEmail } from "../lib/emailTemplates.js";
 
 export async function me(req, res) {
   if (!req.user) return fail(res, "Not authenticated", 401);
@@ -227,6 +229,37 @@ export async function resetUserPassword(req, res, next) {
     });
 
     return ok(res, { user: serializeUser(user), credentials: credentials(req, user, tempPassword) }, "Password reset");
+  } catch (err) {
+    next(err);
+  }
+}
+
+// "Email these details" button in the credentials dialog. The temporary
+// password isn't stored, so the admin UI sends back what it's showing; we only
+// mail it if it is still the user's real, unchanged temporary password - this
+// can't be used to email arbitrary text or an already-replaced password.
+export async function emailCredentials(req, res, next) {
+  try {
+    const { tempPassword, reset } = z
+      .object({ tempPassword: z.string().min(1), reset: z.boolean().optional() })
+      .parse(req.body);
+
+    const target = await prisma.user.findUnique({ where: { id: req.params.userId } });
+    if (!target) throw new ApiError("User not found.", 404);
+    if (!target.mustChangePassword || !(await bcrypt.compare(tempPassword, target.passwordHash))) {
+      throw new ApiError("That temporary password is no longer current. Reset the password to get a new one.", 400);
+    }
+
+    const loginUrl = req.get("origin") || process.env.ADMIN_URL || "";
+    const mail = credentialsEmail({ name: target.name, loginUrl, email: target.email, tempPassword, reset });
+    const result = await sendMail({ kind: "credentials", to: target.email, systemOnly: true, redact: true, ...mail });
+    if (!result.ok) {
+      throw new ApiError(
+        result.status === "skipped" ? "Connect a Gmail account in Settings > Email first." : result.error || "Couldn't send the email.",
+        result.status === "skipped" ? 400 : 502,
+      );
+    }
+    return ok(res, { sentTo: target.email }, "Email sent");
   } catch (err) {
     next(err);
   }

@@ -220,6 +220,11 @@ export const usersApi = {
     return data?.data;
   },
 
+  emailCredentials: async (userId, body) => {
+    const { data } = await http.post(`/user/${userId}/email-credentials`, body);
+    return data?.data;
+  },
+
   getUserBookings: async (userId, params = {}) => {
     const { data } = await http.get(`/user/${userId}/bookings`, { params });
     return data?.data || { bookings: [], pagination: {} };

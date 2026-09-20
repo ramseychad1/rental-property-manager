@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { usersApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,8 +57,10 @@ function Row({ label, value, mono = true }) {
  * Shows a new/reset account's sign-in details once, since no email is sent.
  * "Copy all" puts a ready-to-paste message on the clipboard.
  */
-export default function CredentialsDialog({ open, onOpenChange, credentials, name, reset = false }) {
+export default function CredentialsDialog({ open, onOpenChange, credentials, name, userId, reset = false }) {
   const [copiedAll, setCopiedAll] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [emailedTo, setEmailedTo] = useState(null);
   if (!credentials) return null;
 
   const message = [
@@ -69,6 +72,19 @@ export default function CredentialsDialog({ open, onOpenChange, credentials, nam
     "",
     "You'll be asked to choose your own password the first time you sign in.",
   ].join("\n");
+
+  const emailIt = async () => {
+    setEmailing(true);
+    try {
+      const result = await usersApi.emailCredentials(userId, { tempPassword: credentials.tempPassword, reset });
+      setEmailedTo(result.sentTo);
+      toast.success(`Emailed to ${result.sentTo}`);
+    } catch (err) {
+      toast.error(err.normalizedMessage || "Couldn't send the email");
+    } finally {
+      setEmailing(false);
+    }
+  };
 
   const copyAll = async () => {
     try {
@@ -87,7 +103,7 @@ export default function CredentialsDialog({ open, onOpenChange, credentials, nam
         <DialogHeader>
           <DialogTitle>{reset ? "Password reset" : "User created"}{name ? ` — ${name}` : ""}</DialogTitle>
           <DialogDescription>
-            No email is sent. Copy these details and send them to the user yourself.
+            Nothing is sent automatically. Copy these details, or use <strong className="text-foreground">Email to user</strong> to send them from your connected Gmail.
             <strong className="text-foreground"> The password is shown only once</strong> — close this
             and it can't be retrieved (you can reset it again from the user's profile).
           </DialogDescription>
@@ -104,6 +120,12 @@ export default function CredentialsDialog({ open, onOpenChange, credentials, nam
             {copiedAll ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             Copy all
           </Button>
+          {userId && (
+            <Button type="button" variant="outline" onClick={emailIt} disabled={emailing} data-testid="credentials-email">
+              {emailing ? <Loader2 className="w-4 h-4 animate-spin" /> : emailedTo ? <Check className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+              {emailedTo ? "Emailed - send again" : "Email to user"}
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>

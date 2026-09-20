@@ -139,9 +139,11 @@ export async function sendTest(req, res, next) {
     if (mine.status !== "active") throw new ApiError("Your Gmail connection needs to be reconnected.", 400);
 
     const mail = testEmail(mine.email);
-    const result = await sendMail({ kind: "test", to: req.user.email, ownerId: req.user.id, strict: true, ...mail });
+    // Send to the connected mailbox itself (not the admin login address, which
+    // may not be a real inbox) so "did it arrive?" checks the same Gmail account.
+    const result = await sendMail({ kind: "test", to: mine.email, ownerId: req.user.id, strict: true, ...mail });
     if (!result.ok) throw new ApiError(result.error || "Couldn't send the test email.", 502);
-    return ok(res, { sentTo: req.user.email, via: result.via }, "Test email sent");
+    return ok(res, { sentTo: mine.email, via: result.via }, "Test email sent");
   } catch (err) {
     next(err);
   }

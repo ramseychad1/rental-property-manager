@@ -582,8 +582,7 @@ export default function ItemDetailPage() {
                 </div>
                 {(bookedDates.data?.blockedRanges || []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No bookings on this {vertical.item.singular.toLowerCase()}{" "}
-                    yet.
+                    No upcoming bookings on this {vertical.item.singular.toLowerCase()}.
                   </p>
                 ) : (
                   <ul className="space-y-2">
@@ -592,8 +591,15 @@ export default function ItemDetailPage() {
                         key={i}
                         className="flex items-center justify-between text-sm"
                       >
-                        <span className="font-mono">
-                          {fmtDate(d.startDate)} → {fmtDate(d.endDate)}
+                        <span>
+                          <span className="font-mono">
+                            {fmtDate(d.startDate)} → {fmtDate(d.endDate)}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {d.nights} night{d.nights === 1 ? "" : "s"} · {d.guestName}
+                            <span className="font-mono text-xs"> ({d.bookingId})</span>
+                          </span>
                         </span>
                         <StatusBadge status={d.status} />
                       </li>

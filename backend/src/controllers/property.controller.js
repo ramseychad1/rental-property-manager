@@ -4,6 +4,7 @@ import { ok, fail, ApiError } from "../lib/response.js";
 import { serializeProperty } from "../lib/serialize.js";
 import { unflatten } from "../middleware/upload.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
+import { dateOnly } from "../lib/serialize.js";
 import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, findManagedProperty } from "../lib/access.js";
 
@@ -254,6 +255,36 @@ export async function bookedDates(req, res, next) {
     }
 
     return ok(res, Array.from(dates).sort());
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Admin "Booked dates" tab: one row per held booking that hasn't ended yet.
+// (bookedDates above returns a flat list of individual nights for the public
+// calendar - a different shape, so this is a separate endpoint.)
+export async function bookedRanges(req, res, next) {
+  try {
+    await findManagedProperty(req.user, req.params.id);
+    const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+
+    const bookings = await prisma.booking.findMany({
+      where: { propertyId: req.params.id, bookingStatus: { in: HELD_STATUSES }, checkOut: { gte: today } },
+      orderBy: { checkIn: "asc" },
+      select: { id: true, bookingId: true, guestName: true, checkIn: true, checkOut: true, totalNights: true, bookingStatus: true },
+    });
+
+    return ok(res, {
+      blockedRanges: bookings.map((b) => ({
+        id: b.id,
+        bookingId: b.bookingId,
+        guestName: b.guestName,
+        startDate: dateOnly(b.checkIn),
+        endDate: dateOnly(b.checkOut),
+        nights: b.totalNights,
+        status: b.bookingStatus,
+      })),
+    });
   } catch (err) {
     next(err);
   }

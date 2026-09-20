@@ -6,6 +6,7 @@ import {
   updateProperty,
   removeProperty,
   bookedDates,
+  bookedRanges,
   pricingPreview,
   checkAvailability,
 } from "../controllers/property.controller.js";
@@ -22,6 +23,7 @@ const propertyUpload = upload.fields([
 router.get("/", listProperties);
 router.get("/:id", getProperty);
 router.get("/:id/booked-dates", bookedDates);
+router.get("/:id/booked-ranges", requireStaff, bookedRanges);
 router.get("/:id/pricing", pricingPreview);
 router.get("/:id/check-availability", requireStaff, checkAvailability);
 router.post("/", requireStaff, propertyUpload, createProperty);

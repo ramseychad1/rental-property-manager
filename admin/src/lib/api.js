@@ -112,9 +112,10 @@ export const itemsApi = {
     return data;
   },
 
+  // Upcoming held bookings as ranges: { blockedRanges: [{ startDate, endDate, nights, guestName, bookingId, status }] }
   bookedDates: async (id) => {
-    const { data } = await http.get(`/property/${id}/booked-dates`);
-    return data?.data || [];
+    const { data } = await http.get(`/property/${id}/booked-ranges`);
+    return data?.data || { blockedRanges: [] };
   },
 
   checkAvailability: async (id, params) => {

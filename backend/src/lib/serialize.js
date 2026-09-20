@@ -1,6 +1,6 @@
 import { normalizeMD } from "./seasonRange.js";
 
-const dateOnly = (d) => (d ? new Date(d).toISOString().slice(0, 10) : d);
+export const dateOnly = (d) => (d ? new Date(d).toISOString().slice(0, 10) : d);
 
 // The frontend and admin panel were originally built against a Mongoose/Mongo
 // API and still expect Mongo-shaped JSON (`_id`, nested nested `price`/

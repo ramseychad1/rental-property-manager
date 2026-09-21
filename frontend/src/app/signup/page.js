@@ -238,8 +238,13 @@ export default function SignupPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user) router.replace("/");
-  }, [user]);
+    if (!user) return;
+    // Honor ?next= (e.g. back to an invitation) - signup() itself also
+    // redirects, and this effect must not override it with "/".
+    const sp = new URLSearchParams(window.location.search);
+    const next = sp.get("next");
+    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  }, [user, router]);
 
   return (
     <div className="min-h-[calc(100vh-180px)] flex items-center justify-center px-4 py-16 bg-[var(--color-secondary)]">

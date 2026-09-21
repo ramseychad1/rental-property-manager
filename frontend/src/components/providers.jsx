@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BookingProvider } from "@/context/BookingContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import PendingInviteClaimer from "@/components/PendingInviteClaimer";
 
 export function Providers({ children }) {
   return (
@@ -13,6 +14,7 @@ export function Providers({ children }) {
       <AuthProvider>
         <BookingProvider>
           {children}
+          <PendingInviteClaimer />
           <Toaster />
         </BookingProvider>
       </AuthProvider>

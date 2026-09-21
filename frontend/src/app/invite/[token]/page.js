@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/services/api";
+import { PENDING_INVITE_KEY } from "@/components/PendingInviteClaimer";
 
 // Landing page for an owner's invitation link. Signed-out visitors are sent to
 // create an account / sign in and come straight back here (via ?next=), at
@@ -42,10 +43,22 @@ export default function InvitePage({ params }) {
     };
   }, [token]);
 
+  // Remember the token while the visitor goes off to sign up / sign in, so the
+  // invitation is still claimed even if they land somewhere other than this page.
+  useEffect(() => {
+    if (state !== "ready" || authLoading || user) return;
+    try {
+      sessionStorage.setItem(PENDING_INVITE_KEY, token);
+    } catch {}
+  }, [state, authLoading, user, token]);
+
   useEffect(() => {
     if (authLoading || !user || claimed.current) return;
     if (state !== "ready" && state !== "invalid") return;
     claimed.current = true;
+    try {
+      sessionStorage.removeItem(PENDING_INVITE_KEY);
+    } catch {}
     setState("claiming");
     api
       .claimInvite(token)

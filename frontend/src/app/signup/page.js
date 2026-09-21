@@ -32,7 +32,7 @@ function SignupForm() {
 
   const [form, setForm] = useState({
     name: "",
-    email: "",
+    email: params.get("email") || "",
     otp: "",
     password: "",
     confirm: "",

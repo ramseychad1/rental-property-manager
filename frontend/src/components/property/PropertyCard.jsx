@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Lock, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,6 +17,14 @@ export default function PropertyCard({ property }) {
     >
       <Link href={`/properties/${property._id}`} className="block">
         <div className="relative h-[320px] w-full overflow-hidden rounded-xl">
+          {property.isPrivate && (
+            <Badge
+              className="absolute left-3 top-3 z-10 gap-1 rounded-full bg-black/70 px-3 py-1 text-xs text-white"
+              data-testid={`private-badge-${property._id}`}
+            >
+              <Lock className="h-3 w-3" /> Private
+            </Badge>
+          )}
           {thumbnail && (
             <Image
               src={thumbnail}

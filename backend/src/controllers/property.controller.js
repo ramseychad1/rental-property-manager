@@ -6,7 +6,14 @@ import { unflatten } from "../middleware/upload.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { dateOnly } from "../lib/serialize.js";
 import { seasonForKey } from "../lib/seasonRange.js";
-import { isStaff, isSuperAdmin, propertyScope, findManagedProperty } from "../lib/access.js";
+import {
+  isStaff,
+  isSuperAdmin,
+  propertyScope,
+  findManagedProperty,
+  visiblePropertyWhere,
+  findViewableProperty,
+} from "../lib/access.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -24,6 +31,7 @@ const propertySchema = z.object({
   bedrooms: z.coerce.number().int().min(0).default(1),
   bathrooms: z.coerce.number().int().min(0).default(1),
   status: z.enum(["active", "inactive", "draft"]).default("active"),
+  isPrivate: z.preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean().default(false)),
   location: z
     .object({
       address: z.string().trim().optional().default(""),
@@ -65,13 +73,13 @@ export async function listProperties(req, res, next) {
     // The admin panel asks for its "manage" view (all statuses, only the
     // properties the user may manage) via this header. Everyone else - the
     // public site, even when a staff member is signed in on it - sees active
-    // properties only.
+    // properties only, minus private ones they have no access to.
     const managing = isStaff(req.user) && req.get("X-Client") === ADMIN_CLIENT;
     const { search, status } = req.query;
 
     const where = {};
     if (!managing) {
-      where.status = "active";
+      Object.assign(where, visiblePropertyWhere(req.user));
     } else {
       Object.assign(where, propertyScope(req.user));
       if (status && status !== "all") where.status = status;
@@ -96,14 +104,9 @@ export async function listProperties(req, res, next) {
 
 export async function getProperty(req, res, next) {
   try {
-    const property = await prisma.property.findUnique({ where: { id: req.params.id } });
-
-    if (!property) throw new ApiError("Property not found.", 404);
-    // Inactive properties are visible only to whoever manages them.
-    const canManage = isSuperAdmin(req.user) || (isStaff(req.user) && property.ownerId === req.user.id);
-    if (property.status !== "active" && !canManage) {
-      throw new ApiError("Property not found.", 404);
-    }
+    // Inactive properties, and private ones the viewer has no grant for, look
+    // exactly like nonexistent ids.
+    const property = await findViewableProperty(req.user, req.params.id);
 
     return ok(res, serializeProperty(property));
   } catch (err) {
@@ -132,6 +135,7 @@ export async function createProperty(req, res, next) {
         bedrooms: body.bedrooms,
         bathrooms: body.bathrooms,
         status: body.status,
+        isPrivate: body.isPrivate,
         amenities,
         locationAddress: body.location.address,
         locationCity: body.location.city,
@@ -176,6 +180,7 @@ export async function updateProperty(req, res, next) {
     if (body.bedrooms !== undefined) data.bedrooms = body.bedrooms;
     if (body.bathrooms !== undefined) data.bathrooms = body.bathrooms;
     if (body.status !== undefined) data.status = body.status;
+    if (flat.isPrivate !== undefined) data.isPrivate = body.isPrivate;
     if (req.body.amenities !== undefined) data.amenities = toArray(req.body.amenities);
     if (isSuperAdmin(req.user) && body.ownerId !== undefined) {
       data.ownerId = await resolveOwnerId(req.user, body.ownerId);
@@ -241,6 +246,7 @@ export async function removeProperty(req, res, next) {
 
 export async function bookedDates(req, res, next) {
   try {
+    await findViewableProperty(req.user, req.params.id);
     const bookings = await prisma.booking.findMany({
       where: { propertyId: req.params.id, bookingStatus: { in: HELD_STATUSES } },
       select: { checkIn: true, checkOut: true },
@@ -295,8 +301,7 @@ export async function bookedRanges(req, res, next) {
 export async function pricingPreview(req, res, next) {
   try {
     const { from, to } = req.query;
-    const property = await prisma.property.findUnique({ where: { id: req.params.id } });
-    if (!property) throw new ApiError("Property not found.", 404);
+    const property = await findViewableProperty(req.user, req.params.id);
 
     const seasons = await prisma.season.findMany({ where: { propertyId: req.params.id } });
 

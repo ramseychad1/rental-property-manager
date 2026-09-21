@@ -14,6 +14,7 @@ import {
   Trash2,
   LayoutGrid,
   List,
+  Lock,
 } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -55,6 +56,17 @@ function OwnerLine({ property, className = "" }) {
     >
       <UserRound className="w-3 h-3" /> {property.owner ? property.owner.name : "Unassigned"}
     </div>
+  );
+}
+
+function PrivateBadge({ className = "" }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground ${className}`}
+      data-testid="private-badge"
+    >
+      <Lock className="w-3 h-3" /> Private
+    </span>
   );
 }
 
@@ -104,7 +116,10 @@ export default function ItemListPage() {
                 alt={p.title}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
               />
-              <div className="absolute top-3 left-3"><StatusBadge className="bg-black/90" status={p.status} /></div>
+              <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                <StatusBadge className="bg-black/90" status={p.status} />
+                {p.isPrivate && <PrivateBadge className="bg-black/90" />}
+              </div>
               <div className="absolute top-3 right-3" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -270,6 +285,7 @@ export default function ItemListPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-display font-semibold truncate">{p.title}</span>
                   <StatusBadge status={p.status} />
+                  {p.isPrivate && <PrivateBadge />}
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="w-3 h-3" /> {p.location.city}, {p.location.country}

@@ -8,6 +8,7 @@ import AvailabilityCard from "@/components/property/AvailabilityCard";
 import { api } from "@/services/api";
 import ImagePreviewModal from "@/components/property/ImagePreviewModel";
 import { formatMonthDay, weekdayRule } from "@/lib/seasonRange";
+import PropertyUnavailable from "@/components/property/PropertyUnavailable";
 
 export default function PropertyDetailClient({
   propertyId,
@@ -54,16 +55,7 @@ export default function PropertyDetailClient({
     };
   }, [id, initialProperty]);
 
-  if (error === "not-found") {
-    return (
-      <div className="mx-auto max-w-3xl px-5 py-20 text-center">
-        <h1 className="font-display text-3xl font-bold">Property not found</h1>
-        <p className="mt-3 text-[var(--color-muted-foreground)]">
-          This property is no longer available.
-        </p>
-      </div>
-    );
-  }
+  if (error === "not-found") return <PropertyUnavailable />;
 
   const galleryImages = property?.images?.gallery || [];
   const thumbnail = property?.images?.thumbnail;
@@ -221,7 +213,7 @@ export default function PropertyDetailClient({
       )}
 
       {/* Map */}
-      {property && (
+      {property && mapEmbedUrl && (
         <div
           className="mt-12 overflow-hidden rounded-2xl border border-[var(--color-border)]"
           data-testid="property-map"

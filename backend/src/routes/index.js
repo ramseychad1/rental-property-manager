@@ -9,6 +9,7 @@ import mediaRoutes from "./media.routes.js";
 import siteContentRoutes from "./siteContent.routes.js";
 import emailRoutes from "./email.routes.js";
 import thingToDoRoutes from "./thingToDo.routes.js";
+import inviteRoutes from "./invite.routes.js";
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use("/media", mediaRoutes);
 router.use("/site-content", siteContentRoutes);
 router.use("/email", emailRoutes);
 router.use("/thingtodo", thingToDoRoutes);
+router.use("/invite", inviteRoutes);
 
 export default router;

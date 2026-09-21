@@ -124,6 +124,12 @@ export const api = {
   listThingsToDo: () => request("/thingtodo", { cache: "no-store" }),
   getThingToDo: (id) => request(`/thingtodo/${id}`, { cache: "no-store" }),
 
+  // Trusted-renter invitations (private properties)
+  previewInvite: (token) =>
+    request(`/invite/preview/${encodeURIComponent(token)}`, { cache: "no-store" }),
+  claimInvite: (token) =>
+    request("/invite/claim", { method: "POST", body: { token } }),
+
   // Bookings
   listMyBookings: (userId) =>
     request(`/user/${userId}/bookings`, { cache: "no-store" }),

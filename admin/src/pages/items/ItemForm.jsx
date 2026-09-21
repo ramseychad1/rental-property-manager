@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -49,6 +50,7 @@ const schema = z
     bedrooms: z.coerce.number().int().min(0),
     bathrooms: z.coerce.number().int().min(0),
     status: z.enum(["active", "inactive"]),
+    isPrivate: z.boolean().default(false),
   })
   .refine((d) => d.maxNights >= d.minNights, {
     message: "Max nights must be ≥ min nights",
@@ -106,6 +108,7 @@ export default function ItemFormPage({ mode = "create" }) {
       bedrooms: 2,
       bathrooms: 1,
       status: "active",
+      isPrivate: false,
     },
   });
 
@@ -145,6 +148,7 @@ export default function ItemFormPage({ mode = "create" }) {
         bedrooms: existing.bedrooms,
         bathrooms: existing.bathrooms,
         status: existing.status,
+        isPrivate: !!existing.isPrivate,
       });
       setOwnerId(existing.ownerId || "none");
       setThumbnailUrl(existing.images?.thumbnail || "");
@@ -190,6 +194,7 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("bedrooms", String(values.bedrooms));
     fd.append("bathrooms", String(values.bathrooms));
     fd.append("status", values.status);
+    fd.append("isPrivate", String(!!values.isPrivate));
     if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega
@@ -461,6 +466,23 @@ export default function ItemFormPage({ mode = "create" }) {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="form-private">Private listing</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Hidden from the public site. Only renters you invite (see Trusted Renters) can see and book it.
+                    </p>
+                  </div>
+                  <Switch
+                    id="form-private"
+                    data-testid="form-private"
+                    checked={!!watch("isPrivate")}
+                    onCheckedChange={(v) => setValue("isPrivate", v, { shouldDirty: true })}
+                  />
+                </div>
               </div>
             </div>
           </Card>

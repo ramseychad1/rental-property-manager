@@ -21,6 +21,7 @@ const BookingListPage = lazy(() => import("@/pages/bookings/BookingList"));
 const UserListPage = lazy(() => import("@/pages/users/UserList"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
 const SiteContentPage = lazy(() => import("@/pages/siteContent/SiteContent"));
+const TrustedRentersPage = lazy(() => import("@/pages/trustedRenters/TrustedRenters"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const ThingsToDoList = lazy(() => import("@/pages/ThingsToDo/ThingsToDoList"));
 const ThingsToDoDetail = lazy(() => import("@/pages/ThingsToDo/ThingsToDoDetail"));
@@ -65,6 +66,7 @@ export default function App() {
                       <Route path=":id" element={<ThingsToDoDetail />} />
                       <Route path=":id/edit" element={<ThingsToDoForm mode="edit" />} />
                     </Route>
+                    <Route path="trusted-renters" element={<TrustedRentersPage />} />
                     <Route path="bookings" element={<BookingListPage />} />
                     <Route path="pricing" element={<Navigate to={`/${vertical.item.slug}`} replace />} />
                     <Route path="users" element={<SuperAdminRoute><UserListPage /></SuperAdminRoute>} />

@@ -237,6 +237,31 @@ export const usersApi = {
   },
 };
 
+// Trusted renters (private-property invitations and grants)
+export const invitesApi = {
+  // Returns the invitation plus its one-time `inviteUrl`.
+  create: async (body) => {
+    const { data } = await http.post("/invite", body);
+    return data?.data;
+  },
+  listInvites: async () => {
+    const { data } = await http.get("/invite");
+    return data?.data || [];
+  },
+  cancelInvite: async (id) => {
+    const { data } = await http.delete(`/invite/${id}`);
+    return data;
+  },
+  listGrants: async () => {
+    const { data } = await http.get("/invite/grants");
+    return data?.data || [];
+  },
+  revokeGrant: async (id) => {
+    const { data } = await http.delete(`/invite/grants/${id}`);
+    return data;
+  },
+};
+
 // ThingsToDo APIs
 export const thingsToDoApi = {
   list: async (params = {}) => {

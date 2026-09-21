@@ -122,6 +122,19 @@ export function ownerNewBookingEmail(b, p, { adminUrl } = {}) {
   };
 }
 
+export function inviteEmail({ ownerName, inviteeName, inviteUrl, days }) {
+  const owner = esc(ownerName || "A property owner");
+  return {
+    subject: `${ownerName || "A property owner"} invited you to view their private properties`,
+    ...layout({
+      heading: "You're invited",
+      intro: `${inviteeName ? `Hi ${esc(inviteeName)}, ` : ""}${owner} has invited you to view and request stays at their private properties. Accept the invitation to create your account (or sign in if you already have one). You'll then see their private properties alongside the public ones every time you visit.`,
+      cta: { label: "Accept invitation", url: inviteUrl },
+      outro: `This link works once and expires in ${days} days. If you weren't expecting this invitation, you can ignore this email.`,
+    }),
+  };
+}
+
 export function otpEmail(purpose, code) {
   const reset = purpose === "PASSWORD_RESET";
   return {

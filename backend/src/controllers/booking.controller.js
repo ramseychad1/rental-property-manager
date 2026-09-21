@@ -5,7 +5,7 @@ import { ok, ApiError } from "../lib/response.js";
 import { serializeBooking } from "../lib/serialize.js";
 import { notifyBookingCreated, notifyBookingEvent } from "../lib/notifications.js";
 import { seasonForKey } from "../lib/seasonRange.js";
-import { isStaff, isSuperAdmin, propertyScope, bookingScope } from "../lib/access.js";
+import { isStaff, isSuperAdmin, propertyScope, bookingScope, findViewableProperty } from "../lib/access.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -115,6 +115,9 @@ export async function createBooking(req, res, next) {
   try {
     const body = createBookingSchema.parse(req.body);
     const propertyId = req.params.propertyId;
+
+    // Guests can only book what they can see (private properties need a grant).
+    await findViewableProperty(req.user, propertyId);
 
     const checkIn = new Date(body.checkIn);
     const checkOut = new Date(body.checkOut);

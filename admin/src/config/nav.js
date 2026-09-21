@@ -5,6 +5,7 @@ import {
   Users,
   Settings,
   MapPinned,
+  UserCheck,
   LayoutTemplate,
 } from "lucide-react";
 import { vertical } from "@/config/vertical";
@@ -28,6 +29,12 @@ export const navConfig = [
     to: "/bookings",
     icon: CalendarCheck2,
     testid: "nav-bookings",
+  },
+  {
+    label: "Trusted Renters",
+    to: "/trusted-renters",
+    icon: UserCheck,
+    testid: "nav-trusted-renters",
   },
   // A group: expands in the sidebar to show its children.
   {

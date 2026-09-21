@@ -12,7 +12,7 @@ export default async function HomePage() {
 
   try {
     const response = await api.listProperties();
-    properties = response.data ?? [];
+    properties = (response.data ?? []).filter((p) => !p.isPrivate);
   } catch (error) {
     console.error("Failed to load homepage properties", error);
   }

@@ -30,7 +30,7 @@ export default function HeroSection({ initialProperties = [], content: heroConte
     let cancelled = false;
     api.listProperties()
       .then((d) => {
-        if (!cancelled) setProperties(d.data ?? []);
+        if (!cancelled) setProperties((d.data ?? []).filter((p) => !p.isPrivate));
       })
       .catch(() => {
         if (!cancelled) setProperties([]);

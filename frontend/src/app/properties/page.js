@@ -1,4 +1,4 @@
-import PropertyCard from "@/components/property/PropertyCard";
+import PropertyList from "@/components/property/PropertyList";
 import { api } from "@/services/api";
 import { getIcon } from "@/lib/homeIcons";
 import { getSiteContent, getBrand, pageTitle } from "@/lib/getSiteContent";
@@ -61,19 +61,7 @@ export default async function PropertiesPage() {
       >
         {error && <div className="mb-4 text-sm text-red-700">{error}</div>}
 
-        {properties.length === 0 ? (
-          <div className="py-20 text-center">
-            <p className="text-lg text-[var(--color-muted-foreground)]">
-              {page.emptyMessage}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {properties.map((property) => (
-              <PropertyCard key={property._id} property={property} />
-            ))}
-          </div>
-        )}
+        <PropertyList initialProperties={properties} emptyMessage={page.emptyMessage} />
       </section>
     </div>
   );

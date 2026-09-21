@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeSeason } from "../lib/serialize.js";
 import { normalizeMD, isValidMD } from "../lib/seasonRange.js";
-import { findManagedProperty } from "../lib/access.js";
+import { findManagedProperty, findViewableProperty } from "../lib/access.js";
 
 const monthDay = z
   .string()
@@ -50,6 +50,7 @@ function checkNightRange(body) {
 
 export async function listSeasons(req, res, next) {
   try {
+    await findViewableProperty(req.user, req.params.propertyId);
     const seasons = await prisma.season.findMany({
       where: { propertyId: req.params.propertyId },
       orderBy: { createdAt: "asc" },

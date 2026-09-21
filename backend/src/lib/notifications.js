@@ -1,6 +1,6 @@
 import { prisma } from "./prisma.js";
 import { sendMail, getSystemConnection } from "./mailer.js";
-import { guestBookingEmail, ownerNewBookingEmail, otpEmail, contactEmail } from "./emailTemplates.js";
+import { guestBookingEmail, ownerNewBookingEmail, otpEmail, contactEmail, inviteEmail } from "./emailTemplates.js";
 
 // Fire-and-forget wrappers around sendMail. Callers do `void notifyX(...)`
 // after they've responded, so a mail problem can never fail a request.
@@ -70,5 +70,16 @@ export async function notifyContact(body) {
     await sendMail({ kind: "contact", to, systemOnly: true, replyTo: body.email, ...mail });
   } catch (err) {
     swallow("contact")(err);
+  }
+}
+
+// Sent from the inviting owner's own Gmail when connected (falls back to the
+// system sender). Replies go to the owner.
+export async function notifyInvite({ owner, email, inviteeName, inviteUrl, days }) {
+  try {
+    const mail = inviteEmail({ ownerName: owner.name, inviteeName, inviteUrl, days });
+    return await sendMail({ kind: "owner-invite", to: email, ...mail, ownerId: owner.id, replyTo: owner.email });
+  } catch (err) {
+    swallow("invite")(err);
   }
 }

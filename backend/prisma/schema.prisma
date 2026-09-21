@@ -39,24 +39,29 @@ enum VerificationPurpose {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  phone        String?
-  picture      String?
-  role         UserRole  @default(Guest)
-  isVerified   Boolean   @default(false)
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  passwordHash       String
+  phone              String?
+  picture            String?
+  role               UserRole         @default(Guest)
+  isVerified         Boolean          @default(false)
   // Deactivated users can't sign in or use an existing session.
-  isActive           Boolean @default(true)
+  isActive           Boolean          @default(true)
   // Set when a SuperAdmin creates the account or resets its password; the API
   // blocks everything except changing the password until it's cleared.
-  mustChangePassword Boolean @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  bookings     Booking[]
-  ownedProperties Property[]
-  emailConnection EmailConnection?
+  mustChangePassword Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  bookings           Booking[]
+  ownedProperties    Property[]
+  emailConnection    EmailConnection?
+  // Trusted-renter access (see OwnerInvite / OwnerGrant below).
+  invitesSent        OwnerInvite[]    @relation("InviteOwner")
+  invitesClaimed     OwnerInvite[]    @relation("InviteClaimer")
+  grantsGiven        OwnerGrant[]     @relation("GrantOwner")
+  grantsReceived     OwnerGrant[]     @relation("GrantGuest")
 }
 
 model VerificationCode {
@@ -76,12 +81,15 @@ model Property {
   title       String
   description String?
   status      PropertyStatus @default(active)
+  // Private properties are hidden from the public site; only the owner,
+  // a SuperAdmin and guests holding an OwnerGrant from the owner can see them.
+  isPrivate   Boolean        @default(false)
 
-  minNights Int @default(2)
+  minNights Int   @default(2)
   maxNights Int?
-  guests    Int @default(2)
-  bedrooms  Int @default(1)
-  bathrooms Int @default(1)
+  guests    Int   @default(2)
+  bedrooms  Int   @default(1)
+  bathrooms Int   @default(1)
   rating    Float @default(4.9)
 
   amenities String[]
@@ -248,4 +256,38 @@ model ThingToDo {
   updatedAt       DateTime @updatedAt
 
   @@index([category])
+}
+
+// An owner's emailed invitation to become a "trusted renter". Only a SHA-256
+// hash of the token is stored; the raw token exists only in the emailed link.
+// Claiming it creates an OwnerGrant.
+model OwnerInvite {
+  id              String    @id @default(cuid())
+  ownerId         String
+  owner           User      @relation("InviteOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  email           String
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  claimedAt       DateTime?
+  claimedByUserId String?
+  claimedBy       User?     @relation("InviteClaimer", fields: [claimedByUserId], references: [id], onDelete: SetNull)
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([ownerId])
+}
+
+// A guest's standing access to all of an owner's private properties (including
+// ones added later). Revoking sets revokedAt; re-claiming an invite reactivates it.
+model OwnerGrant {
+  id          String    @id @default(cuid())
+  ownerId     String
+  owner       User      @relation("GrantOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  guestUserId String
+  guest       User      @relation("GrantGuest", fields: [guestUserId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@unique([ownerId, guestUserId])
+  @@index([guestUserId])
 }

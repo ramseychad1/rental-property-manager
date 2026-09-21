@@ -39,7 +39,7 @@ export function requireSuperAdmin(req, res, next) {
 // it's changed, only the calls needed to change it (and browse the public
 // site) are allowed.
 const PASSWORD_CHANGE_ALLOWED = new Set(["GET /user", "POST /user/logout", "PATCH /user/updatePassword"]);
-const PUBLIC_GET_PREFIXES = ["/property", "/season", "/site-content", "/media", "/health"];
+const PUBLIC_GET_PREFIXES = ["/property", "/season", "/site-content", "/media", "/health", "/invite/preview"];
 
 export function enforcePasswordChange(req, res, next) {
   if (!req.user?.mustChangePassword) return next();

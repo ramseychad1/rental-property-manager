@@ -15,11 +15,12 @@ import { api } from "@/services/api";
 export default function InvitePage({ params }) {
   const { token } = use(params);
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
 
   const [invite, setInvite] = useState(null); // { ownerName, email }
   const [state, setState] = useState("loading"); // loading | ready | claiming | invalid | error
   const [message, setMessage] = useState("");
+  const [ownInvite, setOwnInvite] = useState(false);
   const claimed = useRef(false);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function InvitePage({ params }) {
         router.replace("/properties");
       })
       .catch((err) => {
+        setOwnInvite(err.details?.code === "OWN_INVITE");
         setMessage(err.message || "This invitation is no longer valid.");
         setState("error");
       });
@@ -99,14 +101,35 @@ export default function InvitePage({ params }) {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-secondary)] text-[var(--color-primary)]">
               <ShieldX className="h-7 w-7" />
             </div>
-            <h1 className="font-display text-2xl font-bold">Invitation unavailable</h1>
+            <h1 className="font-display text-2xl font-bold">
+              {ownInvite ? "This invitation is for someone else" : "Invitation unavailable"}
+            </h1>
             <p className="mt-3 text-[var(--color-muted-foreground)]">
-              {message || "This invitation has expired, was cancelled, or has already been used."} Ask the owner
-              to send you a new one.
+              {ownInvite
+                ? `${message} Send the link to your guest, or to test it yourself, sign out (or use a private window) and open it again.`
+                : `${message || "This invitation has expired, was cancelled, or has already been used."} Ask the owner to send you a new one.`}
             </p>
-            <Button asChild size="lg" className="mt-6">
-              <Link href="/properties">Browse properties</Link>
-            </Button>
+            {ownInvite ? (
+              <div className="mt-6 flex flex-col gap-3">
+                <Button
+                  size="lg"
+                  data-testid="invite-signout"
+                  onClick={async () => {
+                    await logout();
+                    window.location.reload();
+                  }}
+                >
+                  Sign out and continue
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/properties">Browse properties</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button asChild size="lg" className="mt-6">
+                <Link href="/properties">Browse properties</Link>
+              </Button>
+            )}
           </>
         ) : null}
       </div>

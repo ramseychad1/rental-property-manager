@@ -153,7 +153,7 @@ export async function claimInvite(req, res, next) {
     if (!invite || invite.revokedAt || invite.expiresAt < new Date() || !invite.owner.isActive) {
       throw new ApiError("This invitation is no longer valid. Ask the owner to send a new one.", 410);
     }
-    if (invite.ownerId === req.user.id) throw new ApiError("You can't accept your own invitation.", 400);
+    if (invite.ownerId === req.user.id) throw new ApiError("You're signed in as the owner who sent this invitation.", 400, { code: "OWN_INVITE" });
 
     // Idempotent for the person who already claimed it (e.g. a page reload).
     if (invite.claimedAt && invite.claimedByUserId !== req.user.id) {

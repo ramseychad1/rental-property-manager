@@ -22,6 +22,7 @@ export default function InvitePage({ params }) {
   const [state, setState] = useState("loading"); // loading | ready | claiming | invalid | error
   const [message, setMessage] = useState("");
   const [ownInvite, setOwnInvite] = useState(false);
+  const [signInIssue, setSignInIssue] = useState(false);
   const claimed = useRef(false);
 
   useEffect(() => {
@@ -68,7 +69,12 @@ export default function InvitePage({ params }) {
       })
       .catch((err) => {
         setOwnInvite(err.details?.code === "OWN_INVITE");
-        setMessage(err.message || "This invitation is no longer valid.");
+        setSignInIssue(err.status === 401);
+        setMessage(
+          err.status === 401
+            ? "We couldn't confirm your sign-in. If you're in a private window, allow cookies for this site, sign in again, and reopen this link."
+            : err.message || "This invitation is no longer valid.",
+        );
         setState("error");
       });
   }, [authLoading, user, state, token, router]);
@@ -120,7 +126,9 @@ export default function InvitePage({ params }) {
             <p className="mt-3 text-[var(--color-muted-foreground)]">
               {ownInvite
                 ? `${message} Send the link to your guest, or to test it yourself, sign out (or use a private window) and open it again.`
-                : `${message || "This invitation has expired, was cancelled, or has already been used."} Ask the owner to send you a new one.`}
+                : signInIssue
+                  ? message
+                  : `${message || "This invitation has expired, was cancelled, or has already been used."} Ask the owner to send you a new one.`}
             </p>
             {ownInvite ? (
               <div className="mt-6 flex flex-col gap-3">

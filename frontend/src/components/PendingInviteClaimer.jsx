@@ -37,6 +37,15 @@ export default function PendingInviteClaimer() {
         router.replace("/properties");
       })
       .catch((err) => {
+        // Not actually signed in (e.g. cookies blocked): keep the token so the
+        // next real sign-in can still claim it.
+        if (err.status === 401) {
+          try {
+            sessionStorage.setItem(PENDING_INVITE_KEY, token);
+          } catch {}
+          toast.error("We couldn't confirm your sign-in. If you're in a private window, allow cookies for this site and sign in again.");
+          return;
+        }
         // Owner opening their own link, or an expired/used link: nothing to do
         // beyond telling the person once.
         if (err.details?.code !== "OWN_INVITE") toast.error(err.message || "That invitation is no longer valid.");

@@ -24,12 +24,16 @@ const PRESETS = [
 ];
 
 function presetKeyFor(term) {
+  // Explicit choice wins (set the moment someone picks "Custom" - see
+  // applyPreset below). Falls back to matching by value for terms loaded from
+  // the server, which never carry this UI-only flag.
+  if (term.custom) return "custom";
   const match = PRESETS.find((p) => p.key !== "custom" && p.dueType === term.dueType && p.offset === term.offset);
   return match?.key || "custom";
 }
 
 function newTerm() {
-  return { id: crypto.randomUUID(), label: "", percent: "", dueType: "immediate", offset: 0 };
+  return { id: crypto.randomUUID(), label: "", percent: "", dueType: "immediate", offset: 0, custom: false };
 }
 
 export { newTerm };
@@ -38,13 +42,21 @@ function TermRow({ term, index, onChange, onRemove }) {
   const presetKey = presetKeyFor(term);
 
   const applyPreset = (key) => {
-    const preset = PRESETS.find((p) => p.key === key);
-    if (!preset || key === "custom") {
-      // Switching to Custom keeps the current values - just exposes the raw controls.
-      onChange({ ...term });
+    if (key === "custom") {
+      // Without a real value change here, this due date's dueType/offset would
+      // still match a preset (e.g. the "immediate" default) and the dropdown
+      // would immediately snap back to that preset instead of staying on
+      // Custom. The explicit flag is what makes "Custom" stick.
+      onChange({
+        ...term,
+        custom: true,
+        dueType: term.dueType === "immediate" ? "days_before_checkin" : term.dueType,
+        offset: term.offset || 1,
+      });
       return;
     }
-    onChange({ ...term, dueType: preset.dueType, offset: preset.offset });
+    const preset = PRESETS.find((p) => p.key === key);
+    onChange({ ...term, custom: false, dueType: preset.dueType, offset: preset.offset });
   };
 
   return (
@@ -64,9 +76,9 @@ function TermRow({ term, index, onChange, onRemove }) {
         <div className="relative">
           <Input
             type="number"
-            min="0.01"
+            min="0"
             max="100"
-            step="0.1"
+            step="any"
             value={term.percent}
             onChange={(e) => onChange({ ...term, percent: e.target.value })}
             data-testid={`payment-term-percent-${index}`}

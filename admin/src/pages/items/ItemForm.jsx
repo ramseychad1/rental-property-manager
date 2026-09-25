@@ -194,10 +194,18 @@ export default function ItemFormPage({ mode = "create" }) {
       toast.error(`Payment terms must add up to 100% (currently ${sum}%).`);
       return;
     }
-    if (paymentTerms.some((t) => !t.label.trim() || !Number(t.percent))) {
-      toast.error("Every payment needs a label and a percent greater than 0.");
+    if (paymentTerms.some((t) => !Number(t.percent))) {
+      toast.error("Every payment needs a percent greater than 0.");
       return;
     }
+    // An unlabeled row shows "Payment N" only as placeholder text, not a real
+    // value - fall back to that same default rather than force everyone to
+    // type it.
+    const namedPaymentTerms = paymentTerms.map((t, i) => ({
+      ...t,
+      label: t.label.trim() || `Payment ${i + 1}`,
+      percent: Number(t.percent),
+    }));
 
     const fd = new FormData();
 
@@ -213,7 +221,7 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("isPrivate", String(!!values.isPrivate));
     fd.append("depositEnabled", String(depositEnabled));
     fd.append("depositAmount", String(depositAmount || 0));
-    fd.append("paymentTerms", JSON.stringify(paymentTerms.map((t) => ({ ...t, percent: Number(t.percent) }))));
+    fd.append("paymentTerms", JSON.stringify(namedPaymentTerms));
     if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega

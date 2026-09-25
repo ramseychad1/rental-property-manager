@@ -114,6 +114,10 @@ console.log(data)
   const mutationOptions = (successMessage) => ({
     onSuccess: (booking) => {
       qc.invalidateQueries({ queryKey: ["bookings"] });
+      // The Dashboard's KPIs, revenue chart and "payments behind" list all
+      // read from this same booking data - without this it keeps showing
+      // whatever was cached until something else happens to refetch it.
+      qc.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
       updateCachedActive(booking);
       toast.success(successMessage);
     },
@@ -147,6 +151,7 @@ console.log(data)
       bookingsApi.cancel(id, cancelledBy, cancellationReason),
     onSuccess: (booking) => {
       qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
       updateCachedActive(booking);
       setCancelDialog(false);
       setCancelTargetId(null);

@@ -337,6 +337,7 @@ export default function ItemDetailPage() {
     mutationFn: () => itemsApi.remove(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["items"] });
+      qc.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
       toast.success(`${vertical.item.singular} deleted`);
       navigate(`/${vertical.item.slug}`);
     },

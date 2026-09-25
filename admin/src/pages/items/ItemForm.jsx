@@ -168,6 +168,7 @@ export default function ItemFormPage({ mode = "create" }) {
     mutationFn: (fd) => itemsApi.create(fd),
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ["items"] });
+      qc.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
       toast.success(`${vertical.item.singular} created`);
       navigate(`/${vertical.item.slug}/${created._id}`);
     },
@@ -179,6 +180,7 @@ export default function ItemFormPage({ mode = "create" }) {
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ["items"] });
       qc.invalidateQueries({ queryKey: queryKeys.item(id) });
+      qc.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
       toast.success(`${vertical.item.singular} updated`);
       navigate(`/${vertical.item.slug}/${saved._id || id}`);
     },

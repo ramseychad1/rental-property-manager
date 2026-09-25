@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ArrowRight,
   CalendarCheck2,
   CalendarDays,
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const series = data?.charts?.series || [];
   const statusDist = data?.charts?.bookingStatus || [];
   const recentBookings = data?.recentBookings || [];
+  const overdueInstallments = data?.overdueInstallments || [];
   const loading = analytics.isLoading;
   const periodLabel = data?.filters?.label || "Selected period";
 
@@ -154,7 +156,7 @@ export default function DashboardPage() {
         )}
       </DataToolbar>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         <KpiCard
           testid="kpi-items"
           label={`Total ${vertical.item.plural}`}
@@ -183,6 +185,13 @@ export default function DashboardPage() {
           icon={Wallet}
           accent
           hint="Only paid bookings included"
+        />
+        <KpiCard
+          testid="kpi-payments-behind"
+          label="Payments Behind"
+          value={loading ? "-" : fmtNumber(summary.overduePayments)}
+          icon={AlertTriangle}
+          hint="Scheduled installments past due, as of now"
         />
       </div>
 
@@ -287,6 +296,45 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {!loading && overdueInstallments.length > 0 && (
+        <Card className="p-5 rounded-xl border-rose-500/30" data-testid="payments-attention-card">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <span className="overline text-rose-600">Needs attention</span>
+              <h3 className="font-display text-lg font-semibold">Payments behind</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                These booking installments are past due. Follow up with the guest, then mark the payment received
+                on the booking once it arrives - nothing here changes automatically.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/bookings">
+                Open bookings <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {overdueInstallments.map((item) => (
+              <div
+                key={item._id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-rose-500/20 bg-rose-500/5 p-3"
+                data-testid={`overdue-installment-${item._id}`}
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">
+                    {item.guestName} - {item.propertyTitle}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {item.label} - <span className="font-mono">{item.bookingId}</span> - was due {fmtDate(item.dueDate)}
+                  </div>
+                </div>
+                <span className="font-mono text-sm font-semibold shrink-0">{fmtCurrency(item.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="p-5 rounded-xl">
         <div className="flex items-start justify-between mb-4">

@@ -106,6 +106,16 @@ model Property {
   priceServiceFee  Int    @default(0)
   priceTaxRate     Int    @default(0)
 
+  // Payment schedule (see BookingInstallment). Empty paymentTerms = no
+  // schedule configured; bookings then use the legacy single paymentStatus
+  // flow unchanged. Percentages must sum to 100 (validated in the controller).
+  // Each entry: {id, label, percent, dueType: "immediate" | "months_before_checkin"
+  // | "days_before_checkin", offset}.
+  paymentTerms   Json    @default("[]")
+  depositEnabled Boolean @default(false)
+  // Flat dollar amount, fixed per property - added to the first-due installment.
+  depositAmount  Int     @default(0)
+
   thumbnailUrl String?
   gallery      String[]
 
@@ -120,6 +130,30 @@ model Property {
   bookings Booking[]
 
   @@index([ownerId])
+}
+
+// One row per payment-schedule installment, generated from the property's
+// paymentTerms when the owner accepts a booking (a snapshot - later edits to
+// the property's terms never rewrite an existing booking's installments).
+model BookingInstallment {
+  id              String    @id @default(cuid())
+  bookingId       String
+  booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  order           Int
+  label           String
+  percent         Float
+  amount          Int
+  dueDate         DateTime
+  // True when the property's flat security deposit was folded into this
+  // installment (always the earliest-due one) - depositAmount is that portion,
+  // broken out so it can be displayed separately from the percentage amount.
+  includesDeposit Boolean   @default(false)
+  depositAmount   Int       @default(0)
+  paid            Boolean   @default(false)
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([bookingId])
 }
 
 model Season {
@@ -175,6 +209,8 @@ model Booking {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  installments BookingInstallment[]
 
   @@index([propertyId])
   @@index([userId])

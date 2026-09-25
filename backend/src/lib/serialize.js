@@ -60,6 +60,9 @@ export function serializeProperty(p) {
       serviceFee: p.priceServiceFee,
       taxRate: p.priceTaxRate,
     },
+    paymentTerms: p.paymentTerms ?? [],
+    depositEnabled: p.depositEnabled ?? false,
+    depositAmount: p.depositAmount ?? 0,
     images: {
       thumbnail: p.thumbnailUrl ?? null,
       gallery: p.gallery ?? [],
@@ -86,6 +89,39 @@ export function serializeSeason(s) {
       endDate: normalizeMD(r.endDate),
     })),
   };
+}
+
+export function serializeInstallment(i) {
+  if (!i) return null;
+  return {
+    _id: i.id,
+    order: i.order,
+    label: i.label,
+    percent: i.percent,
+    amount: i.amount,
+    dueDate: dateOnly(i.dueDate),
+    includesDeposit: i.includesDeposit,
+    depositAmount: i.depositAmount,
+    paid: i.paid,
+    paidAt: i.paidAt,
+    overdue: !i.paid && new Date(i.dueDate) < new Date(),
+  };
+}
+
+// Derived from a booking's installments (only present when the property has a
+// payment schedule configured - see paymentSchedule.js). Booking-level status
+// never changes automatically based on this; it's purely informational, e.g.
+// for the "payments behind" dashboard flag.
+export function summarizePaymentPlan(installments) {
+  if (!installments || installments.length === 0) return null;
+  const totalDue = installments.reduce((s, i) => s + i.amount, 0);
+  const totalPaid = installments.filter((i) => i.paid).reduce((s, i) => s + i.amount, 0);
+  const overdue = installments.filter((i) => !i.paid && new Date(i.dueDate) < new Date());
+  const upcoming = installments.filter((i) => !i.paid && new Date(i.dueDate) >= new Date());
+  const nextDue = upcoming.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0] ?? null;
+  let status = "paid";
+  if (totalPaid < totalDue) status = overdue.length > 0 ? "overdue" : totalPaid > 0 ? "partial" : "unpaid";
+  return { status, totalDue, totalPaid, overdueCount: overdue.length, nextDueDate: nextDue ? dateOnly(nextDue.dueDate) : null };
 }
 
 export function serializeBooking(b) {
@@ -115,6 +151,13 @@ export function serializeBooking(b) {
     paymentStatus: b.paymentStatus,
     cancelledBy: b.cancelledBy ?? null,
     cancellationReason: b.cancellationReason ?? null,
+    // Only present when the query loaded installments (a schedule was
+    // generated for this booking) - absent, not an empty array, for every
+    // legacy booking so the admin UI can tell "no schedule" from "not loaded".
+    ...(b.installments !== undefined && {
+      installments: b.installments.map(serializeInstallment),
+      paymentPlan: summarizePaymentPlan(b.installments),
+    }),
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   };

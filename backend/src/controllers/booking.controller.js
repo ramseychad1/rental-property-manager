@@ -3,9 +3,11 @@ import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeBooking } from "../lib/serialize.js";
+import { dateOnly } from "../lib/serialize.js";
 import { notifyBookingCreated, notifyBookingEvent } from "../lib/notifications.js";
 import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, bookingScope, findViewableProperty } from "../lib/access.js";
+import { buildInstallments } from "../lib/paymentSchedule.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -190,7 +192,7 @@ export async function listBookings(req, res, next) {
     const [bookings, totalCount] = await Promise.all([
       prisma.booking.findMany({
         where,
-        include: { property: true, user: true },
+        include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
@@ -220,7 +222,7 @@ export async function getBooking(req, res, next) {
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: req.params.id },
-      include: { property: true, user: true },
+      include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
     });
     if (!booking) throw new ApiError("Booking not found.", 404);
 
@@ -255,8 +257,92 @@ async function transition(req, res, next, data, message, event) {
   }
 }
 
-export const acceptBooking = (req, res, next) =>
-  transition(req, res, next, { bookingStatus: "accepted" }, "Booking accepted", "accepted");
+export async function acceptBooking(req, res, next) {
+  try {
+    const existing = await prisma.booking.findFirst({
+      where: { id: req.params.id, ...bookingScope(req.user) },
+      include: { property: true },
+    });
+    if (!existing) throw new ApiError("Booking not found.", 404);
+
+    const hasSchedule = Array.isArray(existing.property.paymentTerms) && existing.property.paymentTerms.length > 0;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({ where: { id: existing.id }, data: { bookingStatus: "accepted" } });
+
+      if (hasSchedule) {
+        // Idempotent: accepting twice (e.g. a retried request) must never
+        // generate a second schedule.
+        const already = await tx.bookingInstallment.count({ where: { bookingId: existing.id } });
+        if (!already) {
+          const installments = buildInstallments({
+            property: existing.property,
+            checkIn: existing.checkIn,
+            total: existing.totalAmount,
+          });
+          await tx.bookingInstallment.createMany({
+            data: installments.map((i) => ({ ...i, bookingId: existing.id })),
+          });
+        }
+      }
+    });
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: existing.id },
+      include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
+    });
+
+    void notifyBookingEvent("accepted", booking);
+
+    return ok(res, serializeBooking(booking), "Booking accepted");
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Marks one payment-schedule installment received (or un-marks a mistaken
+// click). The booking moves from `accepted` to `booked` the first time any
+// installment is marked paid - matching "booked = down payment received" -
+// and never moves automatically afterward, including on later installments or
+// on an overdue one (the owner manages that manually; see the dashboard's
+// payments-behind flag).
+export async function markInstallmentPaid(req, res, next) {
+  try {
+    const { paid } = z.object({ paid: z.boolean() }).parse(req.body);
+
+    const booking = await prisma.booking.findFirst({
+      where: { id: req.params.id, ...bookingScope(req.user) },
+      include: { installments: true },
+    });
+    if (!booking) throw new ApiError("Booking not found.", 404);
+
+    const installment = booking.installments.find((i) => i.id === req.params.installmentId);
+    if (!installment) throw new ApiError("Installment not found.", 404);
+
+    const wasFirstPayment = paid && !booking.installments.some((i) => i.paid);
+
+    await prisma.$transaction([
+      prisma.bookingInstallment.update({
+        where: { id: installment.id },
+        data: { paid, paidAt: paid ? new Date() : null },
+      }),
+      ...(wasFirstPayment && booking.bookingStatus === "accepted"
+        ? [prisma.booking.update({ where: { id: booking.id }, data: { bookingStatus: "booked" } })]
+        : []),
+    ]);
+
+    const updated = await prisma.booking.findUnique({
+      where: { id: booking.id },
+      include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
+    });
+
+    if (wasFirstPayment) void notifyBookingEvent("paid", updated);
+
+    return ok(res, serializeBooking(updated), "Payment updated");
+  } catch (err) {
+    next(err);
+  }
+}
 
 export const rejectBooking = (req, res, next) =>
   transition(req, res, next, { bookingStatus: "rejected" }, "Booking rejected", "rejected");
@@ -282,8 +368,16 @@ export async function setPaymentStatus(req, res, next) {
   const { paymentStatus } = schema.parse(req.body);
 
   try {
-    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
+    const existing = await prisma.booking.findFirst({
+      where: { id: req.params.id, ...bookingScope(req.user) },
+      include: { _count: { select: { installments: true } } },
+    });
     if (!existing) throw new ApiError("Booking not found.", 404);
+    // Scheduled bookings track payment per installment instead - see
+    // markInstallmentPaid. (Refunding a partly-paid schedule is v2.)
+    if (existing._count.installments > 0) {
+      throw new ApiError("This booking has a payment schedule - mark individual installments instead.", 409);
+    }
 
     const data = { paymentStatus };
     if (paymentStatus === "paid" && existing.bookingStatus === "accepted") {
@@ -367,15 +461,29 @@ export async function analytics(req, res, next) {
     const { start, end, bucket, label } = resolveRange(req.query);
 
     const propScope = propertyScope(req.user);
-    const [totalProperties, activeProperties, totalUsers, bookingsInRange] = await Promise.all([
+    const bkScope = bookingScope(req.user);
+    const [totalProperties, activeProperties, totalUsers, bookingsInRange, overdueInstallments] = await Promise.all([
       prisma.property.count({ where: propScope }),
       prisma.property.count({ where: { ...propScope, status: "active" } }),
       // Registered guests only - staff accounts (owners, super admins) aren't customers.
       prisma.user.count({ where: { role: "Guest" } }),
       prisma.booking.findMany({
-        where: { ...bookingScope(req.user), createdAt: { gte: start, lt: end } },
+        where: { ...bkScope, createdAt: { gte: start, lt: end } },
         include: { property: true, user: true },
         orderBy: { createdAt: "desc" },
+      }),
+      // "Payments behind" - independent of the selected date range, this is
+      // always "as of right now". Never changes booking status (see
+      // markInstallmentPaid) - purely a pointer for the owner to go act on.
+      prisma.bookingInstallment.findMany({
+        where: {
+          paid: false,
+          dueDate: { lt: new Date() },
+          booking: { bookingStatus: { in: ["accepted", "booked"] }, ...bkScope },
+        },
+        include: { booking: { include: { property: true, user: true } } },
+        orderBy: { dueDate: "asc" },
+        take: 25,
       }),
     ]);
 
@@ -420,9 +528,26 @@ export async function analytics(req, res, next) {
     const bookingStatus = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
 
     return ok(res, {
-      summary: { totalProperties, activeProperties, totalBookings, pendingBookings, totalUsers, totalRevenue },
+      summary: {
+        totalProperties,
+        activeProperties,
+        totalBookings,
+        pendingBookings,
+        totalUsers,
+        totalRevenue,
+        overduePayments: overdueInstallments.length,
+      },
       charts: { series: Array.from(buckets.values()), bookingStatus },
       recentBookings: bookingsInRange.slice(0, 8).map(serializeBooking),
+      overdueInstallments: overdueInstallments.map((i) => ({
+        _id: i.id,
+        bookingId: i.booking.bookingId,
+        propertyTitle: i.booking.property.title,
+        guestName: i.booking.guestName,
+        label: i.label,
+        amount: i.amount,
+        dueDate: dateOnly(i.dueDate),
+      })),
       filters: { label },
     });
   } catch (err) {

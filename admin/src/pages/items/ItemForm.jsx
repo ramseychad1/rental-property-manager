@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import PaymentScheduleFields, { newTerm } from "@/components/forms/PaymentScheduleFields";
 import {
   Select,
   SelectContent,
@@ -116,6 +117,9 @@ export default function ItemFormPage({ mode = "create" }) {
   // Owners always own what they create, so the picker is hidden for them.
   const { isSuperAdmin } = useAuth();
   const [ownerId, setOwnerId] = useState("none");
+  const [paymentTerms, setPaymentTerms] = useState([]);
+  const [depositEnabled, setDepositEnabled] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(0);
   const { data: ownerData } = useQuery({
     queryKey: ["owners"],
     queryFn: () => usersApi.list({ role: "Owner", limit: 100 }),
@@ -154,6 +158,9 @@ export default function ItemFormPage({ mode = "create" }) {
       setThumbnailUrl(existing.images?.thumbnail || "");
       setGalleryUrls(existing.images?.gallery || []);
       setAmenities(existing.amenities || []);
+      setPaymentTerms((existing.paymentTerms || []).map((t) => ({ ...t, percent: String(t.percent) })));
+      setDepositEnabled(!!existing.depositEnabled);
+      setDepositAmount(existing.depositAmount || 0);
     }
   }, [existing, reset]);
 
@@ -182,7 +189,16 @@ export default function ItemFormPage({ mode = "create" }) {
   // Backend ko location[city], location[country] format milega
   // Ya agar backend JSON accept karta hai toh JSON.stringify use karo
   const onSubmit = (values) => {
- 
+    const sum = paymentTerms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
+    if (paymentTerms.length > 0 && Math.abs(sum - 100) > 0.05) {
+      toast.error(`Payment terms must add up to 100% (currently ${sum}%).`);
+      return;
+    }
+    if (paymentTerms.some((t) => !t.label.trim() || !Number(t.percent))) {
+      toast.error("Every payment needs a label and a percent greater than 0.");
+      return;
+    }
+
     const fd = new FormData();
 
     // Flat fields
@@ -195,6 +211,9 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("bathrooms", String(values.bathrooms));
     fd.append("status", values.status);
     fd.append("isPrivate", String(!!values.isPrivate));
+    fd.append("depositEnabled", String(depositEnabled));
+    fd.append("depositAmount", String(depositAmount || 0));
+    fd.append("paymentTerms", JSON.stringify(paymentTerms.map((t) => ({ ...t, percent: Number(t.percent) }))));
     if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega
@@ -377,6 +396,16 @@ export default function ItemFormPage({ mode = "create" }) {
               </div>
             </div>
           </Card>
+
+          {/* Payment schedule */}
+          <PaymentScheduleFields
+            terms={paymentTerms}
+            setTerms={setPaymentTerms}
+            depositEnabled={depositEnabled}
+            setDepositEnabled={setDepositEnabled}
+            depositAmount={depositAmount}
+            setDepositAmount={setDepositAmount}
+          />
 
           {/* Location */}
           <Card className="p-6 rounded-xl space-y-5">

@@ -14,12 +14,34 @@ import {
   visiblePropertyWhere,
   findViewableProperty,
 } from "../lib/access.js";
+import { assertTermsSumTo100 } from "../lib/paymentSchedule.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
 function toArray(value) {
   if (value === undefined || value === null || value === "") return [];
   return Array.isArray(value) ? value : [value];
+}
+
+const paymentTermSchema = z.object({
+  id: z.string().trim().min(1),
+  label: z.string().trim().min(1, "Label is required").max(60),
+  percent: z.coerce.number().min(0.01, "Must be > 0").max(100),
+  dueType: z.enum(["immediate", "months_before_checkin", "days_before_checkin"]),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+const paymentTermsSchema = z.array(paymentTermSchema).max(12).default([]);
+
+// req.body.paymentTerms arrives as a JSON string over multipart form data
+// (like existingGallery below). Absent = "don't touch it" on a partial update.
+function parsePaymentTerms(raw) {
+  if (raw === undefined) return undefined;
+  try {
+    return paymentTermsSchema.parse(JSON.parse(raw));
+  } catch (err) {
+    if (err instanceof z.ZodError) throw err;
+    throw new ApiError("Invalid payment terms.", 400);
+  }
 }
 
 const propertySchema = z.object({
@@ -42,6 +64,8 @@ const propertySchema = z.object({
     })
     .default({}),
   ownerId: z.string().trim().optional(),
+  depositEnabled: z.preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean().default(false)),
+  depositAmount: z.coerce.number().min(0).default(0),
   price: z
     .object({
       nightly: z.coerce.number().min(0).default(0),
@@ -147,6 +171,13 @@ export async function createProperty(req, res, next) {
         priceCleaningFee: body.price.cleaningFee,
         priceServiceFee: body.price.serviceFee,
         priceTaxRate: body.price.taxRate,
+        depositEnabled: body.depositEnabled,
+        depositAmount: body.depositAmount,
+        paymentTerms: (() => {
+          const terms = parsePaymentTerms(req.body.paymentTerms) ?? [];
+          assertTermsSumTo100(terms);
+          return terms;
+        })(),
         thumbnailUrl: thumbnail?.url ?? null,
         gallery: gallery.map((g) => g.url),
         ownerId: await resolveOwnerId(req.user, body.ownerId),
@@ -184,6 +215,13 @@ export async function updateProperty(req, res, next) {
     if (req.body.amenities !== undefined) data.amenities = toArray(req.body.amenities);
     if (isSuperAdmin(req.user) && body.ownerId !== undefined) {
       data.ownerId = await resolveOwnerId(req.user, body.ownerId);
+    }
+    if (flat.depositEnabled !== undefined) data.depositEnabled = body.depositEnabled;
+    if (flat.depositAmount !== undefined) data.depositAmount = body.depositAmount;
+    const paymentTerms = parsePaymentTerms(req.body.paymentTerms);
+    if (paymentTerms !== undefined) {
+      assertTermsSumTo100(paymentTerms);
+      data.paymentTerms = paymentTerms;
     }
 
     if (body.location) {

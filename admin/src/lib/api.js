@@ -188,6 +188,13 @@ export const bookingsApi = {
     });
     return data?.data;
   },
+
+  // Payment-schedule installments (only present on bookings whose property
+  // has payment terms configured - see itemsApi's paymentTerms field).
+  markInstallmentPaid: async (bookingId, installmentId, paid) => {
+    const { data } = await http.patch(`/booking/${bookingId}/installments/${installmentId}`, { paid });
+    return data?.data;
+  },
 };
 
 export const dashboardApi = {

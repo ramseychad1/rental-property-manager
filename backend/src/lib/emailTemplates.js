@@ -64,9 +64,42 @@ const stayRows = (b, p) => [
   ["Booking ID", b.bookingId],
 ];
 
+// A property with a payment schedule: rows breaking down what's due right now
+// (bundling every term already past when the owner accepted, per term) and
+// what's still upcoming. Called with the raw installment rows on the booking
+// (see acceptBooking) - empty/undefined when the property has no schedule.
+function paymentScheduleRows(installments) {
+  if (!installments || installments.length === 0) return [];
+  const now = new Date();
+  const dueNow = installments.filter((i) => new Date(i.dueDate) <= now);
+  const upcoming = installments.filter((i) => new Date(i.dueDate) > now);
+  const rows = [];
+
+  if (dueNow.length) {
+    rows.push(["Due now", ""]);
+    for (const i of dueNow) {
+      const extra = i.includesDeposit ? ` (includes ${money(i.depositAmount)} security deposit)` : "";
+      rows.push([`– ${i.label}`, `${money(i.amount)}${extra}`]);
+    }
+    if (dueNow.length > 1) {
+      rows.push(["Total due now", money(dueNow.reduce((s, i) => s + i.amount, 0))]);
+    }
+  }
+
+  if (upcoming.length) {
+    rows.push(["Upcoming payments", ""]);
+    for (const i of upcoming) {
+      rows.push([`– ${i.label}`, `${money(i.amount)} - due ${fmtStayDate(i.dueDate)}`]);
+    }
+  }
+
+  return rows;
+}
+
 export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
   const who = esc(b.guestName);
   const contact = ownerName ? ` If you have questions, just reply to this email.` : "";
+  const scheduleRows = event === "accepted" ? paymentScheduleRows(b.installments) : [];
   const copy = {
     received: {
       subject: `We received your booking request - ${p.title}`,
@@ -76,7 +109,9 @@ export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
     accepted: {
       subject: `Your booking is accepted - ${p.title}`,
       heading: "Booking accepted",
-      intro: `Hi ${who}, good news - your booking has been accepted.${contact}`,
+      intro: `Hi ${who}, good news - your booking has been accepted.${
+        scheduleRows.length ? " Here's your payment schedule, including what's due now." : ""
+      }${contact}`,
     },
     rejected: {
       subject: `Update on your booking request - ${p.title}`,
@@ -105,7 +140,10 @@ export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
       ? { label: "Browse other dates or properties", url: `${site}/properties` }
       : { label: "View my booking", url: `${site}/bookings` }
     : null;
-  return { subject: copy.subject, ...layout({ heading: copy.heading, intro: copy.intro, rows: stayRows(b, p), cta }) };
+  return {
+    subject: copy.subject,
+    ...layout({ heading: copy.heading, intro: copy.intro, rows: [...stayRows(b, p), ...scheduleRows], cta }),
+  };
 }
 
 export function ownerNewBookingEmail(b, p, { adminUrl } = {}) {

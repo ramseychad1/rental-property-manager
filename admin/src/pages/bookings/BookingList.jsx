@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   Calendar,
+  Check,
   CheckCircle2,
   DollarSign,
   Eye,
   Loader2,
   RefreshCw,
+  Shield,
+  Undo2,
   User as UserIcon,
   XCircle,
 } from "lucide-react";
@@ -50,6 +54,7 @@ import { queryKeys } from "@/lib/queryClient";
 import { vertical } from "@/config/vertical";
 import { fmtCurrency, fmtDate, fmtNights } from "@/lib/formatters";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { cn } from "@/lib/utils";
 
 const LIMIT = 10;
 
@@ -130,6 +135,11 @@ console.log(data)
   const pay = useMutation({
     mutationFn: ({ id, status }) => bookingsApi.setPayment(id, status),
     ...mutationOptions("Payment status updated"),
+  });
+
+  const markInstallment = useMutation({
+    mutationFn: ({ id, installmentId, paid }) => bookingsApi.markInstallmentPaid(id, installmentId, paid),
+    ...mutationOptions("Payment updated"),
   });
 
   const cancel = useMutation({
@@ -434,7 +444,85 @@ console.log(data)
                 </Card>
 
                 {active.bookingStatus !== "pending" &&
-                  active.bookingStatus !== "rejected" && (
+                  active.bookingStatus !== "rejected" &&
+                  (active.installments && active.installments.length > 0 ? (
+                    <Card className="p-4 rounded-xl space-y-3" data-testid="payment-plan-card">
+                      <div className="flex items-center justify-between">
+                        <span className="overline">Payment schedule</span>
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider px-2 py-1 rounded-md border",
+                            active.paymentPlan?.status === "paid" &&
+                              "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+                            active.paymentPlan?.status === "partial" &&
+                              "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+                            active.paymentPlan?.status === "overdue" &&
+                              "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30",
+                            active.paymentPlan?.status === "unpaid" &&
+                              "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30",
+                          )}
+                        >
+                          {active.paymentPlan?.status === "overdue" && <AlertTriangle className="w-3 h-3" />}
+                          {active.paymentPlan?.status}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        {fmtCurrency(active.paymentPlan?.totalPaid)} of {fmtCurrency(active.paymentPlan?.totalDue)} received
+                      </div>
+
+                      <div className="space-y-2">
+                        {active.installments.map((installment) => (
+                          <div
+                            key={installment._id}
+                            className={cn(
+                              "flex items-center justify-between gap-3 rounded-lg border p-2.5",
+                              installment.overdue && "border-rose-500/40 bg-rose-500/5",
+                            )}
+                            data-testid={`installment-row-${installment._id}`}
+                          >
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium flex items-center gap-1.5">
+                                {installment.label}
+                                {installment.includesDeposit && (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase text-muted-foreground"
+                                    title={`Includes ${fmtCurrency(installment.depositAmount)} security deposit`}
+                                  >
+                                    <Shield className="w-3 h-3" /> +deposit
+                                  </span>
+                                )}
+                              </div>
+                              <div className={cn("text-xs", installment.overdue ? "text-rose-600 font-medium" : "text-muted-foreground")}>
+                                {installment.paid
+                                  ? `Paid ${fmtDate(installment.paidAt)}`
+                                  : `${installment.overdue ? "Overdue - was" : "Due"} ${fmtDate(installment.dueDate)}`}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono text-sm font-semibold">{fmtCurrency(installment.amount)}</span>
+                              <Button
+                                size="sm"
+                                variant={installment.paid ? "outline" : "default"}
+                                disabled={markInstallment.isPending}
+                                onClick={() =>
+                                  markInstallment.mutate({
+                                    id: active._id,
+                                    installmentId: installment._id,
+                                    paid: !installment.paid,
+                                  })
+                                }
+                                data-testid={`installment-toggle-${installment._id}`}
+                              >
+                                {installment.paid ? <Undo2 className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                                {installment.paid ? "Undo" : "Mark paid"}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ) : (
                     <Card className="p-4 rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="overline">Payment</span>
@@ -467,7 +555,7 @@ console.log(data)
                         </Button>
                       )}
                     </Card>
-                  )}
+                  ))}
               </div>
             </>
           )}

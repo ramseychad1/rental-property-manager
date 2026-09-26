@@ -794,6 +794,39 @@ function CheckoutInner() {
     );
   }
 
+  // Checked before the "unavailable" fallback below - submitting a request
+  // clears the draft (checkIn/checkOut/propertyId) via reset(), so once a
+  // confirmation exists it must take priority or that fallback wins instead
+  // and the renter never sees confirmation that their request went through.
+  if (confirmation) {
+    return (
+      <div className="max-w-2xl mx-auto px-5 py-20 text-center">
+        <CheckCircle2 className="h-16 w-16 mx-auto text-[var(--color-primary)]" />
+
+        <h1 className="text-4xl font-bold mt-5">Request sent</h1>
+
+        <p className="mt-4 text-[var(--color-muted-foreground)]">
+          Thanks for your booking request! The owner will review it and you&apos;ll hear back by email as soon as
+          they respond, at{" "}
+          <span className="font-semibold text-black">
+            {confirmation.guestInfo?.email}
+          </span>
+          .
+        </p>
+
+        {confirmation.bookingId && (
+          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+            Booking reference: <span className="font-mono">{confirmation.bookingId}</span>
+          </p>
+        )}
+
+        <Button asChild className="mt-8 rounded-2xl h-12 px-8">
+          <Link href="/bookings">View My Bookings</Link>
+        </Button>
+      </div>
+    );
+  }
+
   if (
     loadError ||
     !draft.propertyId ||
@@ -813,27 +846,6 @@ function CheckoutInner() {
 
         <Button asChild className="mt-8">
           <Link href="/properties">Browse Properties</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (confirmation) {
-    return (
-      <div className="max-w-2xl mx-auto px-5 py-20 text-center">
-        <CheckCircle2 className="h-16 w-16 mx-auto text-green-600" />
-
-        <h1 className="text-4xl font-bold mt-5">Booking Confirmed</h1>
-
-        <p className="mt-4 text-[var(--color-muted-foreground)]">
-          Confirmation sent to{" "}
-          <span className="font-semibold text-black">
-            {confirmation.guestInfo?.email}
-          </span>
-        </p>
-
-        <Button asChild className="mt-8 rounded-2xl h-12 px-8">
-          <Link href="/bookings">View My Bookings</Link>
         </Button>
       </div>
     );

@@ -52,7 +52,19 @@ export function BookingProvider({ children }) {
   }, [draft, hydrated]);
 
   const update = useCallback((patch) => {
-    setDraft((d) => ({ ...d, ...patch }));
+    setDraft((d) => {
+      const next = { ...d, ...patch };
+      // Add-ons belong to a specific property. If this patch actually points
+      // the draft at a different property (not just re-confirming the same
+      // one) without also saying what its add-ons should be, drop whatever
+      // was selected for the old one - otherwise a stale, unrelated add-on id
+      // rides along into checkout and the booking gets rejected once the
+      // backend finds it doesn't belong to the new property's catalog.
+      if (patch.propertyId && patch.propertyId !== d.propertyId && !("addOnIds" in patch)) {
+        next.addOnIds = [];
+      }
+      return next;
+    });
   }, []);
 
   const reset = useCallback(() => {

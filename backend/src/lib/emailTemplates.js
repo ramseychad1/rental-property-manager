@@ -89,16 +89,28 @@ function priceRows(b) {
   return rows;
 }
 
-// A property with a payment schedule: rows breaking down what's due right now
-// (bundling every term already past when the owner accepted, per term) and
-// what's still upcoming. Called with the raw installment rows on the booking
-// (see acceptBooking) - empty/undefined when the property has no schedule.
+// A property with a payment schedule: rows breaking down what's already paid,
+// what's due right now (bundling every term already past when the owner
+// accepted, per term), and what's still upcoming. Called with the raw
+// installment rows on the booking (see acceptBooking) - empty/undefined when
+// the property has no schedule. At acceptance nothing is paid yet, so the
+// "Paid" section is naturally absent there; it appears once a payment is
+// marked received (see the "paid" event in guestBookingEmail).
 function paymentScheduleRows(installments) {
   if (!installments || installments.length === 0) return [];
   const now = new Date();
-  const dueNow = installments.filter((i) => new Date(i.dueDate) <= now);
-  const upcoming = installments.filter((i) => new Date(i.dueDate) > now);
+  const paid = installments.filter((i) => i.paid);
+  const dueNow = installments.filter((i) => !i.paid && new Date(i.dueDate) <= now);
+  const upcoming = installments.filter((i) => !i.paid && new Date(i.dueDate) > now);
   const rows = [];
+
+  if (paid.length) {
+    rows.push(["Paid", ""]);
+    for (const i of paid) {
+      const extra = i.includesDeposit ? ` (includes ${money(i.depositAmount)} security deposit)` : "";
+      rows.push([`– ${i.label}`, `${money(i.amount)}${extra} - paid ${fmtStayDate(i.paidAt)}`]);
+    }
+  }
 
   if (dueNow.length) {
     rows.push(["Due now", ""]);
@@ -124,7 +136,10 @@ function paymentScheduleRows(installments) {
 export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
   const who = esc(b.guestName);
   const contact = ownerName ? ` If you have questions, just reply to this email.` : "";
-  const scheduleRows = event === "accepted" ? paymentScheduleRows(b.installments) : [];
+  const scheduleRows = event === "accepted" || event === "paid" ? paymentScheduleRows(b.installments) : [];
+  // Only meaningful for "paid" - whether anything on the schedule is still
+  // outstanding, to pick between "here's what's still due" and "fully paid".
+  const scheduleRemaining = (b.installments || []).some((i) => !i.paid);
   const instructions = event === "accepted" && p.paymentInstructions ? p.paymentInstructions.trim() : "";
   const copy = {
     received: {
@@ -152,7 +167,13 @@ export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
     paid: {
       subject: `Payment received - ${p.title}`,
       heading: "Payment received",
-      intro: `Hi ${who}, we've received your payment. Your stay is confirmed.${contact}`,
+      intro: `Hi ${who}, we've received your payment. Your stay is confirmed.${
+        scheduleRows.length
+          ? scheduleRemaining
+            ? " Here's your updated payment schedule, including what's still due."
+            : " Your payment schedule is now fully paid - here's a summary."
+          : ""
+      }${contact}`,
     },
     refunded: {
       subject: `Your payment was refunded - ${p.title}`,

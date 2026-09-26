@@ -13,6 +13,7 @@ const DEFAULT = {
   adults: 2,
   children: 1,
   infants: 1,
+  addOnIds: [],
 };
 
 function loadFromStorage() {

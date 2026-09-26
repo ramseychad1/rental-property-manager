@@ -8,6 +8,7 @@ import {
   cancelBooking,
   setPaymentStatus,
   markInstallmentPaid,
+  updateBookingAddOns,
   analytics,
 } from "../controllers/booking.controller.js";
 import { requireAuth, requireStaff } from "../middleware/auth.js";
@@ -25,5 +26,6 @@ router.patch("/:id/reject", requireStaff, rejectBooking);
 router.patch("/:id/cancel", requireStaff, cancelBooking);
 router.patch("/:id/payment-status", requireStaff, setPaymentStatus);
 router.patch("/:id/installments/:installmentId", requireStaff, markInstallmentPaid);
+router.patch("/:id/add-ons", requireStaff, updateBookingAddOns);
 
 export default router;

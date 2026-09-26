@@ -195,6 +195,13 @@ export const bookingsApi = {
     const { data } = await http.patch(`/booking/${bookingId}/installments/${installmentId}`, { paid });
     return data?.data;
   },
+
+  // Locked (409) once the first installment has been marked paid - see
+  // updateBookingAddOns in the backend.
+  updateAddOns: async (bookingId, addOnIds) => {
+    const { data } = await http.patch(`/booking/${bookingId}/add-ons`, { addOnIds });
+    return data?.data;
+  },
 };
 
 export const dashboardApi = {

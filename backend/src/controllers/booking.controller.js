@@ -30,7 +30,22 @@ function diffNights(checkIn, checkOut) {
   return Math.round((startOfDay(checkOut) - startOfDay(checkIn)) / MS_DAY);
 }
 
-async function computePricing(propertyId, checkIn, checkOut) {
+// Validates the requested add-on ids against the property's current list and
+// returns the matching {id, label, price} rows to snapshot onto the booking.
+// Unknown ids (e.g. the owner removed one after the guest loaded the page)
+// are rejected rather than silently dropped, so the guest isn't charged for
+// something different than what they saw.
+function resolveAddOns(property, addOnIds = []) {
+  if (!addOnIds.length) return [];
+  const catalog = Array.isArray(property.addOns) ? property.addOns : [];
+  return addOnIds.map((id) => {
+    const addOn = catalog.find((a) => a.id === id);
+    if (!addOn) throw new ApiError("One of the selected add-ons is no longer available.", 409);
+    return { id: addOn.id, label: addOn.label, price: addOn.price };
+  });
+}
+
+async function computePricing(propertyId, checkIn, checkOut, addOnIds = []) {
   const property = await prisma.property.findUnique({ where: { id: propertyId } });
   if (!property) throw new ApiError("Property not found.", 404);
 
@@ -79,12 +94,20 @@ async function computePricing(propertyId, checkIn, checkOut) {
   }
 
   const subTotal = segments.reduce((sum, s) => sum + s.subtotal, 0);
-  const taxes = Math.round(((subTotal + property.priceCleaningFee + property.priceServiceFee) * property.priceTaxRate) / 100);
-  const total = subTotal + property.priceCleaningFee + property.priceServiceFee + taxes;
+  // Tax applies to the nightly rate only - not the cleaning fee, service fee,
+  // or add-ons (matches how these agreements are actually written; see the
+  // property-addons backlog note for the real-world example that caught this).
+  const taxes = Math.round((subTotal * property.priceTaxRate) / 100);
+
+  const selectedAddOns = resolveAddOns(property, addOnIds);
+  const addOnsTotal = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
+
+  const total = subTotal + property.priceCleaningFee + property.priceServiceFee + taxes + addOnsTotal;
 
   return {
     property,
     nights,
+    selectedAddOns,
     pricing: {
       segments,
       subTotal,
@@ -92,6 +115,8 @@ async function computePricing(propertyId, checkIn, checkOut) {
       serviceFee: property.priceServiceFee,
       taxes,
       taxRate: property.priceTaxRate,
+      addOns: selectedAddOns,
+      addOnsTotal,
       total,
     },
   };
@@ -111,6 +136,7 @@ const createBookingSchema = z.object({
     country: z.string().trim().optional(),
   }),
   notes: z.string().trim().optional().default(""),
+  addOnIds: z.array(z.string().trim().min(1)).optional().default([]),
 });
 
 export async function createBooking(req, res, next) {
@@ -134,7 +160,7 @@ export async function createBooking(req, res, next) {
     });
     if (overlapping > 0) throw new ApiError("Those dates are no longer available.", 409);
 
-    const { nights, pricing } = await computePricing(propertyId, checkIn, checkOut);
+    const { nights, pricing, selectedAddOns } = await computePricing(propertyId, checkIn, checkOut, body.addOnIds);
     const guests = body.guests ?? body.adults + body.children + body.infants;
 
     const booking = await prisma.booking.create({
@@ -155,6 +181,7 @@ export async function createBooking(req, res, next) {
         notes: body.notes,
         pricing,
         totalAmount: pricing.total,
+        selectedAddOns,
       },
       include: { property: true, user: true },
     });
@@ -339,6 +366,52 @@ export async function markInstallmentPaid(req, res, next) {
     if (wasFirstPayment) void notifyBookingEvent("paid", updated);
 
     return ok(res, serializeBooking(updated), "Payment updated");
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Lets the owner adjust which add-ons apply to a booking - e.g. something
+// agreed by phone that the guest didn't pick at checkout. Locked once the
+// first payment-schedule installment is marked paid (see markInstallmentPaid):
+// at that point the schedule has been acted on and shouldn't be recomputed
+// out from under it. If a schedule already exists (post-acceptance, nothing
+// paid yet) it's safe to just regenerate it from the new total.
+export async function updateBookingAddOns(req, res, next) {
+  try {
+    const { addOnIds } = z.object({ addOnIds: z.array(z.string().trim().min(1)) }).parse(req.body);
+
+    const booking = await prisma.booking.findFirst({
+      where: { id: req.params.id, ...bookingScope(req.user) },
+      include: { installments: true },
+    });
+    if (!booking) throw new ApiError("Booking not found.", 404);
+    if (booking.installments.some((i) => i.paid)) {
+      throw new ApiError("A payment has already been received - add-ons can no longer be changed.", 409);
+    }
+
+    const { pricing, selectedAddOns } = await computePricing(booking.propertyId, booking.checkIn, booking.checkOut, addOnIds);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { pricing, totalAmount: pricing.total, selectedAddOns },
+      });
+
+      if (booking.installments.length > 0) {
+        const property = await tx.property.findUnique({ where: { id: booking.propertyId } });
+        const installments = buildInstallments({ property, checkIn: booking.checkIn, total: pricing.total });
+        await tx.bookingInstallment.deleteMany({ where: { bookingId: booking.id } });
+        await tx.bookingInstallment.createMany({ data: installments.map((i) => ({ ...i, bookingId: booking.id })) });
+      }
+    });
+
+    const updated = await prisma.booking.findUnique({
+      where: { id: booking.id },
+      include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
+    });
+
+    return ok(res, serializeBooking(updated), "Add-ons updated");
   } catch (err) {
     next(err);
   }

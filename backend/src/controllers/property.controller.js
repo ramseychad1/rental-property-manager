@@ -44,6 +44,24 @@ function parsePaymentTerms(raw) {
   }
 }
 
+const addOnSchema = z.object({
+  id: z.string().trim().min(1),
+  label: z.string().trim().min(1, "Label is required").max(60),
+  price: z.coerce.number().min(0.01, "Must be > 0"),
+});
+const addOnsSchema = z.array(addOnSchema).max(20).default([]);
+
+// Same wire shape as paymentTerms above - a JSON string over multipart form data.
+function parseAddOns(raw) {
+  if (raw === undefined) return undefined;
+  try {
+    return addOnsSchema.parse(JSON.parse(raw));
+  } catch (err) {
+    if (err instanceof z.ZodError) throw err;
+    throw new ApiError("Invalid add-ons.", 400);
+  }
+}
+
 const propertySchema = z.object({
   title: z.string().trim().min(1, "Title is required"),
   description: z.string().trim().optional().default(""),
@@ -178,6 +196,7 @@ export async function createProperty(req, res, next) {
           assertTermsSumTo100(terms);
           return terms;
         })(),
+        addOns: parseAddOns(req.body.addOns) ?? [],
         thumbnailUrl: thumbnail?.url ?? null,
         gallery: gallery.map((g) => g.url),
         ownerId: await resolveOwnerId(req.user, body.ownerId),
@@ -223,6 +242,8 @@ export async function updateProperty(req, res, next) {
       assertTermsSumTo100(paymentTerms);
       data.paymentTerms = paymentTerms;
     }
+    const addOns = parseAddOns(req.body.addOns);
+    if (addOns !== undefined) data.addOns = addOns;
 
     if (body.location) {
       if (body.location.address !== undefined) data.locationAddress = body.location.address;

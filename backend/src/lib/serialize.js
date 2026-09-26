@@ -63,6 +63,7 @@ export function serializeProperty(p) {
     paymentTerms: p.paymentTerms ?? [],
     depositEnabled: p.depositEnabled ?? false,
     depositAmount: p.depositAmount ?? 0,
+    addOns: p.addOns ?? [],
     images: {
       thumbnail: p.thumbnailUrl ?? null,
       gallery: p.gallery ?? [],
@@ -147,6 +148,7 @@ export function serializeBooking(b) {
     notes: b.notes ?? "",
     pricing: b.pricing ?? null,
     totalAmount: b.totalAmount,
+    selectedAddOns: b.selectedAddOns ?? [],
     bookingStatus: b.bookingStatus,
     paymentStatus: b.paymentStatus,
     cancelledBy: b.cancelledBy ?? null,

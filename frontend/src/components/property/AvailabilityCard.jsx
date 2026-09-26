@@ -99,6 +99,13 @@ export default function AvailabilityCard({
 
   const checkIn = draft.propertyId === propertyId ? draft.checkIn : null;
   const checkOut = draft.propertyId === propertyId ? draft.checkOut : null;
+  const addOnIds = draft.propertyId === propertyId ? (draft.addOnIds ?? []) : [];
+  const addOnCatalog = property?.addOns ?? [];
+
+  const toggleAddOn = (id) => {
+    const next = addOnIds.includes(id) ? addOnIds.filter((x) => x !== id) : [...addOnIds, id];
+    update({ propertyId, addOnIds: next });
+  };
 
   const guests = useMemo(
     () => ({
@@ -153,10 +160,12 @@ export default function AvailabilityCard({
       return null;
 
     const subTotal = segments.reduce((sum, s) => sum + s.subtotal, 0);
-    const taxes = Math.round(
-      ((subTotal + cleaningFee + serviceFee) * taxRate) / 100,
-    );
-    const total = subTotal + cleaningFee + serviceFee + taxes;
+    // Tax applies to the nightly rate only - not the cleaning fee, service
+    // fee, or add-ons (mirrors the backend's computePricing).
+    const taxes = Math.round((subTotal * taxRate) / 100);
+    const selectedAddOns = addOnCatalog.filter((a) => addOnIds.includes(a.id));
+    const addOnsTotal = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
+    const total = subTotal + cleaningFee + serviceFee + taxes + addOnsTotal;
     const averageNightly = Math.round(subTotal / nights);
     const hasMultipleSeasons =
       segments.length > 1 || segments[0]?.seasonId !== "__default__";
@@ -167,11 +176,13 @@ export default function AvailabilityCard({
       cleaningFee,
       serviceFee,
       taxes,
+      selectedAddOns,
+      addOnsTotal,
       total,
       averageNightly,
       hasMultipleSeasons,
     };
-  }, [checkIn, checkOut, nights, segments, cleaningFee, serviceFee, taxRate]);
+  }, [checkIn, checkOut, nights, segments, cleaningFee, serviceFee, taxRate, addOnCatalog, addOnIds]);
 
   // ── sync calculated pricing into BookingContext ───────────────────────────
   // Runs whenever pricing changes so checkout always has the latest numbers.
@@ -208,6 +219,7 @@ export default function AvailabilityCard({
       adults: guests.adults,
       children: guests.children,
       infants: guests.infants,
+      addOnIds,
     });
     // if (!isAuthenticated) {
     //   router.push(`/login?next=${encodeURIComponent("/checkout")}`);
@@ -245,6 +257,31 @@ export default function AvailabilityCard({
           onChange={(next) => update({ propertyId, ...next })}
           max={property.guests}
         />
+
+        {addOnCatalog.length > 0 && (
+          <div className="space-y-1.5" data-testid="addon-picker">
+            {addOnCatalog.map((addOn) => (
+              <label
+                key={addOn.id}
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+                data-testid={`addon-option-${addOn.id}`}
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={addOnIds.includes(addOn.id)}
+                    onChange={() => toggleAddOn(addOn.id)}
+                    className="h-4 w-4 accent-[var(--color-primary)]"
+                  />
+                  {addOn.label}
+                </span>
+                <span className="text-[var(--color-muted-foreground)]">
+                  {formatCurrency(addOn.price)}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Price header ──────────────────────────────────────────────────── */}
@@ -321,6 +358,12 @@ export default function AvailabilityCard({
             <span>Service fee</span>
             <span>{formatCurrency(pricing.serviceFee)}</span>
           </div>
+          {pricing.selectedAddOns.map((addOn) => (
+            <div key={addOn.id} className="flex justify-between text-[var(--color-muted-foreground)]">
+              <span>{addOn.label}</span>
+              <span>{formatCurrency(addOn.price)}</span>
+            </div>
+          ))}
           {/* <div className="flex justify-between text-[var(--color-muted-foreground)]">
             <span>Taxes ({taxRate}%)</span>
             <span>{formatCurrency(pricing.taxes)}</span>

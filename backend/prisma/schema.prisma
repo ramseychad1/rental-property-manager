@@ -115,6 +115,11 @@ model Property {
   depositEnabled Boolean @default(false)
   // Flat dollar amount, fixed per property - added to the first-due installment.
   depositAmount  Int     @default(0)
+  // Optional paid extras a guest may pick at booking time (linens, bike
+  // rentals, ...). Each entry: {id, label, price}. Flat one-time fee, not
+  // taxed - see computePricing. A booking snapshots what was picked onto its
+  // own selectedAddOns, so editing this list never rewrites past bookings.
+  addOns         Json    @default("[]")
 
   thumbnailUrl String?
   gallery      String[]
@@ -199,8 +204,10 @@ model Booking {
   guestPhone String?
   notes      String?
 
-  pricing     Json
-  totalAmount Int
+  pricing        Json
+  totalAmount    Int
+  // Snapshot of the property's addOns picked for this booking - see Property.addOns.
+  selectedAddOns Json @default("[]")
 
   bookingStatus      BookingStatus @default(pending)
   paymentStatus      PaymentStatus @default(pending)

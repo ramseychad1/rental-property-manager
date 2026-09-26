@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import PaymentScheduleFields, { newTerm } from "@/components/forms/PaymentScheduleFields";
+import AddOnsFields from "@/components/forms/AddOnsFields";
 import {
   Select,
   SelectContent,
@@ -120,6 +121,7 @@ export default function ItemFormPage({ mode = "create" }) {
   const [paymentTerms, setPaymentTerms] = useState([]);
   const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
+  const [addOns, setAddOns] = useState([]);
   const { data: ownerData } = useQuery({
     queryKey: ["owners"],
     queryFn: () => usersApi.list({ role: "Owner", limit: 100 }),
@@ -161,6 +163,7 @@ export default function ItemFormPage({ mode = "create" }) {
       setPaymentTerms((existing.paymentTerms || []).map((t) => ({ ...t, percent: String(t.percent) })));
       setDepositEnabled(!!existing.depositEnabled);
       setDepositAmount(existing.depositAmount || 0);
+      setAddOns((existing.addOns || []).map((a) => ({ ...a, price: String(a.price) })));
     }
   }, [existing, reset]);
 
@@ -209,6 +212,16 @@ export default function ItemFormPage({ mode = "create" }) {
       percent: Number(t.percent),
     }));
 
+    if (addOns.some((a) => !Number(a.price))) {
+      toast.error("Every add-on needs a price greater than 0.");
+      return;
+    }
+    const namedAddOns = addOns.map((a, i) => ({
+      ...a,
+      label: a.label.trim() || `Add-on ${i + 1}`,
+      price: Number(a.price),
+    }));
+
     const fd = new FormData();
 
     // Flat fields
@@ -224,6 +237,7 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("depositEnabled", String(depositEnabled));
     fd.append("depositAmount", String(depositAmount || 0));
     fd.append("paymentTerms", JSON.stringify(namedPaymentTerms));
+    fd.append("addOns", JSON.stringify(namedAddOns));
     if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega
@@ -416,6 +430,9 @@ export default function ItemFormPage({ mode = "create" }) {
             depositAmount={depositAmount}
             setDepositAmount={setDepositAmount}
           />
+
+          {/* Add-ons */}
+          <AddOnsFields addOns={addOns} setAddOns={setAddOns} />
 
           {/* Location */}
           <Card className="p-6 rounded-xl space-y-5">

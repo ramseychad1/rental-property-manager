@@ -119,7 +119,7 @@ function computeSeasonSegments(checkIn, checkOut, seasons, fallbackNightly) {
   return segments;
 }
 
-function buildPricing(checkIn, checkOut, seasons, property) {
+function buildPricing(checkIn, checkOut, seasons, property, addOnIds = []) {
   const nights = checkIn && checkOut ? diffInNights(checkIn, checkOut) : 0;
 
   if (!checkIn || !checkOut || nights <= 0) return null;
@@ -138,11 +138,14 @@ function buildPricing(checkIn, checkOut, seasons, property) {
 
   const subTotal = segments.reduce((s, seg) => s + seg.subtotal, 0);
 
-  const taxes = Math.round(
-    ((subTotal + cleaningFee + serviceFee) * taxRate) / 100
-  );
+  // Tax applies to the nightly rate only - not the cleaning fee, service fee,
+  // or add-ons (mirrors the backend's computePricing).
+  const taxes = Math.round((subTotal * taxRate) / 100);
 
-  const total = subTotal + cleaningFee + serviceFee + taxes;
+  const selectedAddOns = (property?.addOns ?? []).filter((a) => addOnIds.includes(a.id));
+  const addOnsTotal = selectedAddOns.reduce((s, a) => s + a.price, 0);
+
+  const total = subTotal + cleaningFee + serviceFee + taxes + addOnsTotal;
 
   return {
     segments,
@@ -151,6 +154,8 @@ function buildPricing(checkIn, checkOut, seasons, property) {
     serviceFee,
     taxes,
     taxRate,
+    selectedAddOns,
+    addOnsTotal,
     total,
     nights,
   };
@@ -701,8 +706,8 @@ function CheckoutInner() {
   }, [draft.propertyId, draft.checkIn, draft.checkOut]);
 
   const pricing = useMemo(
-    () => buildPricing(localCheckIn, localCheckOut, seasons, property),
-    [localCheckIn, localCheckOut, seasons, property]
+    () => buildPricing(localCheckIn, localCheckOut, seasons, property, draft.addOnIds),
+    [localCheckIn, localCheckOut, seasons, property, draft.addOnIds]
   );
 
   const handleDateChange = useCallback(({ checkIn, checkOut }) => {
@@ -763,6 +768,8 @@ function CheckoutInner() {
           },
 
           notes,
+
+          addOnIds: draft.addOnIds ?? [],
         },
         property._id
       );
@@ -1094,6 +1101,10 @@ function CheckoutInner() {
                   label="Service Fee"
                   value={formatCurrency(pricing?.serviceFee || 0)}
                 />
+
+                {pricing?.selectedAddOns?.map((addOn) => (
+                  <Row key={addOn.id} label={addOn.label} value={formatCurrency(addOn.price)} />
+                ))}
 
                 <Row
                   label={`Taxes (${pricing?.taxRate || 0}%)`}

@@ -26,6 +26,7 @@ import CancelBookingDialog from "@/components/Models/CancelBookingDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -57,6 +58,80 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
 const LIMIT = 10;
+
+// Lets the owner adjust which add-ons apply to this booking (something agreed
+// by phone, or a correction). Locked (409 from the server) once the first
+// payment-schedule installment has been marked paid - see updateAddOns.
+function AddOnsEditor({ booking, onSaved }) {
+  const qc = useQueryClient();
+  const catalog = booking.propertyId?.addOns || [];
+  const [selected, setSelected] = useState(() => new Set((booking.selectedAddOns || []).map((a) => a.id)));
+
+  useEffect(() => {
+    setSelected(new Set((booking.selectedAddOns || []).map((a) => a.id)));
+  }, [booking._id, booking.selectedAddOns]);
+
+  const save = useMutation({
+    mutationFn: (ids) => bookingsApi.updateAddOns(booking._id, ids),
+    onSuccess: (updated) => {
+      onSaved(updated);
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
+      toast.success("Add-ons updated");
+    },
+    onError: (error) => toast.error(error?.normalizedMessage || "Could not update add-ons"),
+  });
+
+  // Nothing to offer and nothing was ever selected - don't clutter the sheet.
+  if (catalog.length === 0 && selected.size === 0) return null;
+
+  const currentIds = new Set((booking.selectedAddOns || []).map((a) => a.id));
+  const dirty = currentIds.size !== selected.size || [...currentIds].some((id) => !selected.has(id));
+  const toggle = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  return (
+    <Card className="p-4 rounded-xl space-y-3" data-testid="addons-card">
+      <span className="overline">Add-ons</span>
+      {catalog.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          This property no longer offers any add-ons to choose from.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {catalog.map((addOn) => (
+            <label
+              key={addOn.id}
+              className="flex items-center justify-between gap-3 rounded-lg border p-2.5 cursor-pointer"
+              data-testid={`addon-toggle-${addOn.id}`}
+            >
+              <span className="flex items-center gap-2 text-sm">
+                <Checkbox checked={selected.has(addOn.id)} onCheckedChange={() => toggle(addOn.id)} />
+                {addOn.label}
+              </span>
+              <span className="font-mono text-sm font-semibold">{fmtCurrency(addOn.price)}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      {dirty && (
+        <Button
+          size="sm"
+          className="w-full"
+          disabled={save.isPending}
+          onClick={() => save.mutate([...selected])}
+          data-testid="addons-save"
+        >
+          Save add-ons
+        </Button>
+      )}
+    </Card>
+  );
+}
 
 function BookingSkeleton() {
   return Array.from({ length: 6 }).map((_, row) => (
@@ -405,6 +480,8 @@ console.log(data)
                     <p className="text-sm">{active.specialRequests}</p>
                   </Card>
                 )}
+
+                <AddOnsEditor booking={active} onSaved={updateCachedActive} />
 
                 <Card className="p-4 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">

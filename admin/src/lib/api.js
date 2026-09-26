@@ -1,21 +1,12 @@
 import axios from "axios";
 
-// API setup
-const DEFAULT_API_URL = "https://api.rentalpropertymanager.com/api";
-
-function normalizeApiUrl(value) {
-  const url = String(value ?? "").trim();
-
-  if (!url || url === "undefined" || url === "null") {
-    return DEFAULT_API_URL;
-  }
-
-  return url.replace(/\/+$/, "");
-}
-
-const API_URL = normalizeApiUrl(
-  typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_URL : "",
-);
+// Deliberately relative (not VITE_API_URL): the browser must hit this app's
+// own origin so the backend's session cookie is set as first-party. Vite's
+// dev/preview server proxies "/api" to the real backend (see vite.config.js).
+// A direct cross-origin call here works on desktop but silently drops the
+// cookie on iOS, where every browser runs on WebKit and blocks third-party
+// cookies by default (login appears to succeed, then the next request 401s).
+const API_URL = "/api";
 
 const http = axios.create({
   baseURL: API_URL,

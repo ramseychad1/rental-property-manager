@@ -50,11 +50,21 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  // Proxying /api through this app's own origin (instead of the browser
+  // calling VITE_API_URL's cross-site domain directly) makes the backend's
+  // session cookie first-party. Cross-site cookies get silently dropped by
+  // WebKit's Intelligent Tracking Prevention, which every iOS browser is
+  // subject to (Chrome/Safari/etc. all run on WebKit on iOS) - without this,
+  // login appears to succeed but no session is ever stored on iOS. See
+  // src/lib/api.js, which now always calls the relative "/api" path.
   server: {
     host: "0.0.0.0",
     port: 5173,
     strictPort: true,
     allowedHosts,
+    proxy: apiOrigin
+      ? { "/api": { target: apiOrigin, changeOrigin: true } }
+      : undefined,
     headers: {
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "no-referrer",
@@ -65,6 +75,9 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 4173,
     allowedHosts,
+    proxy: apiOrigin
+      ? { "/api": { target: apiOrigin, changeOrigin: true } }
+      : undefined,
     headers: {
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "no-referrer",

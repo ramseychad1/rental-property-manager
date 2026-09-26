@@ -20,19 +20,24 @@ export function dueDateFor(term, checkIn, now) {
 // totalAmount (nightly + cleaning + service fee + tax, matching the "full
 // total" decision). Amounts are rounded per-term and the last term absorbs any
 // rounding remainder so they always sum to exactly `total`. The property's
-// flat security deposit, if enabled, is added to whichever installment is due
-// earliest (the "first payment").
+// flat security deposit, if enabled, is added to the first-listed installment.
+//
+// Deliberately NOT sorted by due date: the owner's own order (e.g. "Down
+// Payment", "Installment 1", "Final Payment") is the order shown everywhere -
+// emails, the admin panel, the dashboard. Sorting by computed due date instead
+// used to scramble that order whenever a booking came in late enough that
+// several terms were already due at once (a very common case), since a term
+// due "6 months before check-in" can end up chronologically earlier than one
+// due "upon booking" once check-in is close. Due date still decides whether a
+// term is due-now vs. upcoming (see paymentScheduleRows in emailTemplates.js);
+// it just never reorders the list.
 export function buildInstallments({ property, checkIn, total, now = new Date() }) {
   const terms = Array.isArray(property.paymentTerms) ? property.paymentTerms : [];
   if (!terms.length) return [];
 
-  const withDates = terms
-    .map((t) => ({ label: t.label, percent: t.percent, dueDate: dueDateFor(t, checkIn, now) }))
-    .sort((a, b) => a.dueDate - b.dueDate);
-
   let allocated = 0;
-  const rows = withDates.map((t, idx) => {
-    const isLast = idx === withDates.length - 1;
+  const rows = terms.map((t, idx) => {
+    const isLast = idx === terms.length - 1;
     const amount = isLast ? total - allocated : Math.round((total * t.percent) / 100);
     allocated += amount;
     return {
@@ -40,7 +45,7 @@ export function buildInstallments({ property, checkIn, total, now = new Date() }
       label: t.label,
       percent: t.percent,
       amount,
-      dueDate: t.dueDate,
+      dueDate: dueDateFor(t, checkIn, now),
       includesDeposit: false,
       depositAmount: 0,
       paid: false,

@@ -4,7 +4,13 @@ const SERVER_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "http://localhost:4000/api";
 
-const CLIENT_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+// Deliberately relative (not NEXT_PUBLIC_API_BASE_URL): the browser must hit
+// the frontend's own origin so the backend's session cookie is set as
+// first-party. next.config.mjs rewrites /api/:path* to the real backend.
+// A direct cross-origin call here works on desktop but silently drops the
+// cookie on iOS, where every browser runs on WebKit and blocks third-party
+// cookies by default (login appears to succeed, then /user 401s).
+const CLIENT_BASE = "";
 
 function getBaseUrl() {
   const base = typeof window === "undefined" ? SERVER_BASE : CLIENT_BASE;

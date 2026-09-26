@@ -41,10 +41,19 @@ const nextConfig = {
     root: import.meta.dirname,
   },
   async rewrites() {
+    // Proxying through the frontend's own origin (rather than the browser
+    // calling NEXT_PUBLIC_API_BASE_URL directly) makes the backend's session
+    // cookie first-party. Cross-site cookies get silently dropped by
+    // WebKit's Intelligent Tracking Prevention, which every iOS browser is
+    // subject to (Chrome/Safari/etc. all run on WebKit on iOS) - without
+    // this, login appears to succeed but no session is ever stored on iOS.
+    const backendOrigin = apiRemotePattern
+      ? `${apiRemotePattern.protocol}://${apiRemotePattern.hostname}${apiRemotePattern.port ? `:${apiRemotePattern.port}` : ""}`
+      : "http://localhost:8001";
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8001/api/:path*",
+        destination: `${backendOrigin}/api/:path*`,
       },
     ];
   },

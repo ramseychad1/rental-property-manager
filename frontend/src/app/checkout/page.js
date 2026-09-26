@@ -873,10 +873,19 @@ function CheckoutInner() {
                   {property.title || property.name}
                 </h3>
 
-                <div className="flex items-center gap-2 text-[var(--color-muted-foreground)] mt-2">
-                  <MapPin className="h-4 w-4" />
-                  {property.location?.address || property.location}
-                </div>
+                {(() => {
+                  const locationLabel =
+                    property.location?.address ||
+                    [property.location?.city, property.location?.country].filter(Boolean).join(", ");
+                  return (
+                    locationLabel && (
+                      <div className="flex items-center gap-2 text-[var(--color-muted-foreground)] mt-2">
+                        <MapPin className="h-4 w-4" />
+                        {locationLabel}
+                      </div>
+                    )
+                  );
+                })()}
 
                 <div className="grid md:grid-cols-2 gap-4 mt-6">
                   <DetailCard

@@ -122,6 +122,7 @@ export default function ItemFormPage({ mode = "create" }) {
   const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
   const [addOns, setAddOns] = useState([]);
+  const [paymentInstructions, setPaymentInstructions] = useState("");
   const { data: ownerData } = useQuery({
     queryKey: ["owners"],
     queryFn: () => usersApi.list({ role: "Owner", limit: 100 }),
@@ -164,6 +165,7 @@ export default function ItemFormPage({ mode = "create" }) {
       setDepositEnabled(!!existing.depositEnabled);
       setDepositAmount(existing.depositAmount || 0);
       setAddOns((existing.addOns || []).map((a) => ({ ...a, price: String(a.price) })));
+      setPaymentInstructions(existing.paymentInstructions || "");
     }
   }, [existing, reset]);
 
@@ -238,6 +240,7 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("depositAmount", String(depositAmount || 0));
     fd.append("paymentTerms", JSON.stringify(namedPaymentTerms));
     fd.append("addOns", JSON.stringify(namedAddOns));
+    fd.append("paymentInstructions", paymentInstructions);
     if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega
@@ -429,6 +432,8 @@ export default function ItemFormPage({ mode = "create" }) {
             setDepositEnabled={setDepositEnabled}
             depositAmount={depositAmount}
             setDepositAmount={setDepositAmount}
+            paymentInstructions={paymentInstructions}
+            setPaymentInstructions={setPaymentInstructions}
           />
 
           {/* Add-ons */}

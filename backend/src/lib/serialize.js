@@ -64,6 +64,7 @@ export function serializeProperty(p) {
     depositEnabled: p.depositEnabled ?? false,
     depositAmount: p.depositAmount ?? 0,
     addOns: p.addOns ?? [],
+    paymentInstructions: p.paymentInstructions ?? "",
     images: {
       thumbnail: p.thumbnailUrl ?? null,
       gallery: p.gallery ?? [],

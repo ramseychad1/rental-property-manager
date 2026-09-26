@@ -111,15 +111,18 @@ model Property {
   // flow unchanged. Percentages must sum to 100 (validated in the controller).
   // Each entry: {id, label, percent, dueType: "immediate" | "months_before_checkin"
   // | "days_before_checkin", offset}.
-  paymentTerms   Json    @default("[]")
-  depositEnabled Boolean @default(false)
+  paymentTerms        Json    @default("[]")
+  depositEnabled      Boolean @default(false)
   // Flat dollar amount, fixed per property - added to the first-due installment.
-  depositAmount  Int     @default(0)
+  depositAmount       Int     @default(0)
   // Optional paid extras a guest may pick at booking time (linens, bike
   // rentals, ...). Each entry: {id, label, price}. Flat one-time fee, not
   // taxed - see computePricing. A booking snapshots what was picked onto its
   // own selectedAddOns, so editing this list never rewrites past bookings.
-  addOns         Json    @default("[]")
+  addOns              Json    @default("[]")
+  // Free-form text the owner writes once (e.g. "Send via Venmo @handle or a
+  // check to..."). Shown to the renter in the booking-accepted email.
+  paymentInstructions String  @default("")
 
   thumbnailUrl String?
   gallery      String[]

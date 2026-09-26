@@ -84,6 +84,7 @@ const propertySchema = z.object({
   ownerId: z.string().trim().optional(),
   depositEnabled: z.preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean().default(false)),
   depositAmount: z.coerce.number().min(0).default(0),
+  paymentInstructions: z.string().trim().max(2000).optional().default(""),
   price: z
     .object({
       nightly: z.coerce.number().min(0).default(0),
@@ -191,6 +192,7 @@ export async function createProperty(req, res, next) {
         priceTaxRate: body.price.taxRate,
         depositEnabled: body.depositEnabled,
         depositAmount: body.depositAmount,
+        paymentInstructions: body.paymentInstructions,
         paymentTerms: (() => {
           const terms = parsePaymentTerms(req.body.paymentTerms) ?? [];
           assertTermsSumTo100(terms);
@@ -237,6 +239,7 @@ export async function updateProperty(req, res, next) {
     }
     if (flat.depositEnabled !== undefined) data.depositEnabled = body.depositEnabled;
     if (flat.depositAmount !== undefined) data.depositAmount = body.depositAmount;
+    if (flat.paymentInstructions !== undefined) data.paymentInstructions = body.paymentInstructions;
     const paymentTerms = parsePaymentTerms(req.body.paymentTerms);
     if (paymentTerms !== undefined) {
       assertTermsSumTo100(paymentTerms);

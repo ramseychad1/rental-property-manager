@@ -52,7 +52,13 @@ ${outro ? `<p style="margin:0;font-size:15px;line-height:1.5">${outro}</p>` : ""
   return { html, text };
 }
 
-const stripTags = (s) => String(s || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+const stripTags = (s) =>
+  String(s || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
 
 const stayRows = (b, p) => [
   ["Property", p.title],
@@ -60,9 +66,28 @@ const stayRows = (b, p) => [
   ["Check-out", fmtStayDate(b.checkOut)],
   ["Nights", b.totalNights],
   ["Guests", b.guests],
-  ["Total", money(b.totalAmount)],
-  ["Booking ID", b.bookingId],
 ];
+
+// Itemized price breakdown from the booking's stored pricing snapshot -
+// nightly segments (broken out by season where more than one applies),
+// cleaning fee, service fee, any selected add-ons, tax, then the total. Used
+// on every email that shows money, so guests and owners see the same
+// breakdown the checkout page and admin panel show, not just a lump total.
+function priceRows(b) {
+  const pricing = b.pricing || {};
+  const segments = pricing.segments || [];
+  const rows = segments.map((seg) => [
+    seg.seasonName ? `${seg.nights} nights @ ${money(seg.pricePerNight)} (${seg.seasonName})` : `${seg.nights} nights @ ${money(seg.pricePerNight)}`,
+    money(seg.subtotal),
+  ]);
+  if (segments.length > 1) rows.push(["Subtotal", money(pricing.subTotal)]);
+  if (pricing.cleaningFee) rows.push(["Cleaning fee", money(pricing.cleaningFee)]);
+  if (pricing.serviceFee) rows.push(["Service fee", money(pricing.serviceFee)]);
+  for (const addOn of pricing.addOns || []) rows.push([addOn.label, money(addOn.price)]);
+  if (pricing.taxes) rows.push([`Taxes (${pricing.taxRate}%)`, money(pricing.taxes)]);
+  rows.push(["Total", money(b.totalAmount)]);
+  return rows;
+}
 
 // A property with a payment schedule: rows breaking down what's due right now
 // (bundling every term already past when the owner accepted, per term) and
@@ -100,6 +125,7 @@ export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
   const who = esc(b.guestName);
   const contact = ownerName ? ` If you have questions, just reply to this email.` : "";
   const scheduleRows = event === "accepted" ? paymentScheduleRows(b.installments) : [];
+  const instructions = event === "accepted" && p.paymentInstructions ? p.paymentInstructions.trim() : "";
   const copy = {
     received: {
       subject: `We received your booking request - ${p.title}`,
@@ -140,9 +166,18 @@ export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
       ? { label: "Browse other dates or properties", url: `${site}/properties` }
       : { label: "View my booking", url: `${site}/bookings` }
     : null;
+  const outro = instructions
+    ? `<strong>Payment instructions:</strong><br>${esc(instructions).replace(/\n/g, "<br>")}`
+    : "";
   return {
     subject: copy.subject,
-    ...layout({ heading: copy.heading, intro: copy.intro, rows: [...stayRows(b, p), ...scheduleRows], cta }),
+    ...layout({
+      heading: copy.heading,
+      intro: copy.intro,
+      rows: [...stayRows(b, p), ...priceRows(b), ["Booking ID", b.bookingId], ...scheduleRows],
+      cta,
+      outro,
+    }),
   };
 }
 
@@ -153,7 +188,7 @@ export function ownerNewBookingEmail(b, p, { adminUrl } = {}) {
     ...layout({
       heading: "New booking request",
       intro: `${esc(b.guestName)} (${esc(b.guestEmail)}${b.guestPhone ? `, ${esc(b.guestPhone)}` : ""}) requested a stay.`,
-      rows: [...stayRows(b, p), ...(b.notes ? [["Notes", b.notes]] : [])],
+      rows: [...stayRows(b, p), ...priceRows(b), ["Booking ID", b.bookingId], ...(b.notes ? [["Notes", b.notes]] : [])],
       cta: admin ? { label: "Review this booking", url: `${admin}/bookings` } : null,
       outro: admin ? "" : "Review it in your admin panel.",
     }),

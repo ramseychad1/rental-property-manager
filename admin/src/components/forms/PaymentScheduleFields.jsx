@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -147,6 +148,8 @@ export default function PaymentScheduleFields({
   setDepositEnabled,
   depositAmount,
   setDepositAmount,
+  paymentInstructions,
+  setPaymentInstructions,
 }) {
   const sum = terms.reduce((s, t) => s + (Number(t.percent) || 0), 0);
   const sumOk = terms.length === 0 || Math.abs(sum - 100) < 0.05;
@@ -224,6 +227,22 @@ export default function PaymentScheduleFields({
             </span>
           )}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="payment-instructions">Payment instructions</Label>
+        <p className="text-xs text-muted-foreground">
+          Free-form text shown to the renter once you accept their booking - how you actually want to be paid, e.g.
+          &quot;Please send via Venmo @your-handle, Zelle, or a check to 123 Main St...&quot;
+        </p>
+        <Textarea
+          id="payment-instructions"
+          rows={3}
+          value={paymentInstructions}
+          onChange={(e) => setPaymentInstructions(e.target.value)}
+          placeholder="Please send via Venmo, Zelle, or a check to..."
+          data-testid="payment-instructions"
+        />
       </div>
     </Card>
   );

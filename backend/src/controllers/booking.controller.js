@@ -8,6 +8,7 @@ import { notifyBookingCreated, notifyBookingEvent } from "../lib/notifications.j
 import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, bookingScope, findViewableProperty } from "../lib/access.js";
 import { buildInstallments } from "../lib/paymentSchedule.js";
+import { generateBookingDocument, loadBookingDocument } from "../lib/bookingDocument.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -265,6 +266,53 @@ export async function getBooking(req, res, next) {
   }
 }
 
+// Streams the booking's confirmation PDF. Staff who manage the property and the
+// booking's own renter may download it; anyone else gets a 404.
+export async function getBookingDocument(req, res, next) {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id }, include: { property: true } });
+    if (!booking) throw new ApiError("Booking not found.", 404);
+
+    const isGuest = booking.userId && booking.userId === req.user.id;
+    const managesProperty = isSuperAdmin(req.user) || (isStaff(req.user) && booking.property.ownerId === req.user.id);
+    if (!isGuest && !managesProperty) throw new ApiError("Booking not found.", 404);
+    if (!["accepted", "booked"].includes(booking.bookingStatus)) {
+      throw new ApiError("A document is only available once the booking is accepted.", 409);
+    }
+
+    // POST regenerates from current data (staff only); GET serves the stored copy.
+    const pdf =
+      req.method === "POST" && managesProperty
+        ? await generateBookingDocument(booking.id)
+        : await loadBookingDocument(booking);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Booking-${booking.bookingId}.pdf"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(pdf);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Owner tracks whether the renter returned a signed copy (manual - no e-signature).
+export async function setSignedCopy(req, res, next) {
+  try {
+    const { received } = z.object({ received: z.boolean() }).parse(req.body);
+    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
+    if (!existing) throw new ApiError("Booking not found.", 404);
+
+    const booking = await prisma.booking.update({
+      where: { id: existing.id },
+      data: { signedCopyReceived: received, signedCopyAt: received ? new Date() : null },
+      include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
+    });
+    return ok(res, serializeBooking(booking), received ? "Signed copy recorded" : "Signed copy cleared");
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function transition(req, res, next, data, message, event) {
   try {
     const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
@@ -319,7 +367,17 @@ export async function acceptBooking(req, res, next) {
       include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
     });
 
-    void notifyBookingEvent("accepted", booking);
+    // Confirmation + rental agreement PDF, attached to the acceptance email.
+    // Never fails the acceptance - the email just goes out without it.
+    let attachments;
+    try {
+      const pdf = await generateBookingDocument(existing.id);
+      attachments = [{ filename: `Booking-${booking.bookingId}.pdf`, content: pdf, contentType: "application/pdf" }];
+    } catch (err) {
+      console.error("[DOCUMENT] generation failed:", err.message);
+    }
+
+    void notifyBookingEvent("accepted", booking, { attachments });
 
     return ok(res, serializeBooking(booking), "Booking accepted");
   } catch (err) {

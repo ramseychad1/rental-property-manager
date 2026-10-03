@@ -193,6 +193,22 @@ export const bookingsApi = {
     const { data } = await http.patch(`/booking/${bookingId}/add-ons`, { addOnIds });
     return data?.data;
   },
+
+  // Confirmation + rental agreement PDF. Returns a Blob; `regenerate` rebuilds
+  // it from current property/booking data instead of serving the stored copy.
+  downloadDocument: async (bookingId, { regenerate = false } = {}) => {
+    const { data } = await http.request({
+      url: `/booking/${bookingId}/document`,
+      method: regenerate ? "POST" : "GET",
+      responseType: "blob",
+    });
+    return data;
+  },
+
+  setSignedCopy: async (bookingId, received) => {
+    const { data } = await http.patch(`/booking/${bookingId}/signed-copy`, { received });
+    return data?.data;
+  },
 };
 
 export const dashboardApi = {

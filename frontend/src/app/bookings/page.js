@@ -143,11 +143,18 @@ function BookingCard({ b }) {
           </div>
 
           {/* Footer */}
-          {property?._id && (
-            <div className="mt-auto pt-1 flex justify-end">
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/properties/${property._id}`}>View property →</Link>
-              </Button>
+          {(property?._id || ["accepted", "booked"].includes(b.bookingStatus)) && (
+            <div className="mt-auto pt-1 flex justify-end gap-2">
+              {["accepted", "booked"].includes(b.bookingStatus) && (
+                <Button asChild size="sm" variant="outline">
+                  <a href={`/api/booking/${b._id}/document`}>Download agreement (PDF)</a>
+                </Button>
+              )}
+              {property?._id && (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/properties/${property._id}`}>View property →</Link>
+                </Button>
+              )}
             </div>
           )}
         </div>

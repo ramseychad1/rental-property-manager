@@ -10,6 +10,8 @@ import {
   markInstallmentPaid,
   updateBookingAddOns,
   analytics,
+  getBookingDocument,
+  setSignedCopy,
 } from "../controllers/booking.controller.js";
 import { requireAuth, requireStaff } from "../middleware/auth.js";
 
@@ -20,6 +22,9 @@ router.get("/analytics", requireStaff, analytics);
 
 router.get("/", requireStaff, listBookings);
 router.get("/:id", requireAuth, getBooking);
+router.get("/:id/document", requireAuth, getBookingDocument);
+router.post("/:id/document", requireStaff, getBookingDocument);
+router.patch("/:id/signed-copy", requireStaff, setSignedCopy);
 router.post("/:propertyId", requireAuth, createBooking);
 router.patch("/:id/accept", requireStaff, acceptBooking);
 router.patch("/:id/reject", requireStaff, rejectBooking);

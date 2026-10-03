@@ -123,6 +123,10 @@ model Property {
   // Free-form text the owner writes once (e.g. "Send via Venmo @handle or a
   // check to..."). Shown to the renter in the booking-accepted email.
   paymentInstructions String  @default("")
+  // Rental agreement / house rules text, merged into the PDF generated when a
+  // booking is accepted. New properties are pre-filled by copying the owner's
+  // other property (one-time copy, not a shared record).
+  rentalAgreement     String  @default("")
 
   thumbnailUrl String?
   gallery      String[]
@@ -216,6 +220,14 @@ model Booking {
   paymentStatus      PaymentStatus @default(pending)
   cancelledBy        String?
   cancellationReason String?
+
+  // Generated confirmation + rental agreement PDF (private bucket key, never
+  // exposed as a URL - served through an authenticated route).
+  documentKey         String?
+  documentGeneratedAt DateTime?
+  // Owner-tracked: has the renter returned a signed copy?
+  signedCopyReceived  Boolean   @default(false)
+  signedCopyAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

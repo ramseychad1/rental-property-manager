@@ -123,6 +123,7 @@ export default function ItemFormPage({ mode = "create" }) {
   const [depositAmount, setDepositAmount] = useState(0);
   const [addOns, setAddOns] = useState([]);
   const [paymentInstructions, setPaymentInstructions] = useState("");
+  const [rentalAgreement, setRentalAgreement] = useState("");
   const { data: ownerData } = useQuery({
     queryKey: ["owners"],
     queryFn: () => usersApi.list({ role: "Owner", limit: 100 }),
@@ -166,6 +167,7 @@ export default function ItemFormPage({ mode = "create" }) {
       setDepositAmount(existing.depositAmount || 0);
       setAddOns((existing.addOns || []).map((a) => ({ ...a, price: String(a.price) })));
       setPaymentInstructions(existing.paymentInstructions || "");
+      setRentalAgreement(existing.rentalAgreement || "");
     }
   }, [existing, reset]);
 
@@ -241,6 +243,7 @@ export default function ItemFormPage({ mode = "create" }) {
     fd.append("paymentTerms", JSON.stringify(namedPaymentTerms));
     fd.append("addOns", JSON.stringify(namedAddOns));
     fd.append("paymentInstructions", paymentInstructions);
+    fd.append("rentalAgreement", rentalAgreement);
     if (isSuperAdmin) fd.append("ownerId", ownerId === "none" ? "" : ownerId);
 
     // ✅ Nested location object — bracket notation se backend ko object milega
@@ -435,6 +438,25 @@ export default function ItemFormPage({ mode = "create" }) {
             paymentInstructions={paymentInstructions}
             setPaymentInstructions={setPaymentInstructions}
           />
+
+          {/* Rental agreement */}
+          <Card className="p-6 rounded-xl space-y-3">
+            <div>
+              <span className="overline">Rental agreement &amp; house rules</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                Included in the PDF emailed to renters when you accept a booking, with a signature line. New
+                properties start with a copy of your other property&apos;s text. Leave blank to use a generic
+                starter agreement.
+              </p>
+            </div>
+            <Textarea
+              rows={12}
+              value={rentalAgreement}
+              onChange={(e) => setRentalAgreement(e.target.value)}
+              placeholder="Parking, cancellation policy, check-in process, damages, pets and smoking, checkout duties..."
+              data-testid="rental-agreement"
+            />
+          </Card>
 
           {/* Add-ons */}
           <AddOnsFields addOns={addOns} setAddOns={setAddOns} />

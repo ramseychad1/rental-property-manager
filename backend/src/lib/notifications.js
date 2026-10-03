@@ -35,14 +35,14 @@ export async function notifyBookingCreated(booking) {
 }
 
 // event: accepted | rejected | cancelled | paid | refunded
-export async function notifyBookingEvent(event, booking) {
+export async function notifyBookingEvent(event, booking, { attachments } = {}) {
   try {
     const p = booking.property;
     const owner = await ownerOf(p);
     const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name, siteUrl: process.env.FRONTEND_URL });
     await sendMail({
       kind: `booking-${event}`, to: booking.guestEmail, ...mail,
-      ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id,
+      ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id, attachments,
     });
   } catch (err) {
     swallow(`booking ${event}`)(err);

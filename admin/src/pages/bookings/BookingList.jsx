@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   DollarSign,
   Eye,
+  FileText,
   Loader2,
   RefreshCw,
   Shield,
@@ -219,6 +220,24 @@ console.log(data)
   const markInstallment = useMutation({
     mutationFn: ({ id, installmentId, paid }) => bookingsApi.markInstallmentPaid(id, installmentId, paid),
     ...mutationOptions("Payment updated"),
+  });
+
+  const signedCopy = useMutation({
+    mutationFn: ({ id, received }) => bookingsApi.setSignedCopy(id, received),
+    ...mutationOptions("Signed copy updated"),
+  });
+
+  const downloadDoc = useMutation({
+    mutationFn: async ({ id, bookingId, regenerate }) => {
+      const blob = await bookingsApi.downloadDocument(id, { regenerate });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Booking-${bookingId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    onError: () => toast.error("Couldn't download the document"),
   });
 
   const cancel = useMutation({
@@ -524,6 +543,49 @@ console.log(data)
                     </Button>
                   )}
                 </Card>
+
+                {(active.bookingStatus === "accepted" || active.bookingStatus === "booked") && (
+                  <Card className="p-4 rounded-xl space-y-3" data-testid="documents-card">
+                    <span className="overline">Documents</span>
+                    <p className="text-xs text-muted-foreground">
+                      Booking confirmation and rental agreement, emailed to the renter when you accepted.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        disabled={downloadDoc.isPending}
+                        onClick={() => downloadDoc.mutate({ id: active._id, bookingId: active.bookingId })}
+                      >
+                        <FileText className="w-4 h-4" /> Download PDF
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled={downloadDoc.isPending}
+                        title="Rebuild the PDF from the property's current rules and this booking's current data"
+                        onClick={() =>
+                          downloadDoc.mutate({ id: active._id, bookingId: active.bookingId, regenerate: true })
+                        }
+                      >
+                        <RefreshCw className="w-4 h-4" /> Regenerate
+                      </Button>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={!!active.signedCopyReceived}
+                        disabled={signedCopy.isPending}
+                        onCheckedChange={(v) => signedCopy.mutate({ id: active._id, received: v === true })}
+                        data-testid="signed-copy-checkbox"
+                      />
+                      <span>
+                        Signed copy received
+                        {active.signedCopyReceived && active.signedCopyAt && (
+                          <span className="text-muted-foreground"> · {fmtDate(active.signedCopyAt)}</span>
+                        )}
+                      </span>
+                    </label>
+                  </Card>
+                )}
 
                 {active.bookingStatus !== "pending" &&
                   active.bookingStatus !== "rejected" &&

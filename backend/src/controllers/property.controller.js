@@ -85,6 +85,7 @@ const propertySchema = z.object({
   depositEnabled: z.preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean().default(false)),
   depositAmount: z.coerce.number().min(0).default(0),
   paymentInstructions: z.string().trim().max(2000).optional().default(""),
+  rentalAgreement: z.string().trim().max(20000).optional().default(""),
   price: z
     .object({
       nightly: z.coerce.number().min(0).default(0),
@@ -161,6 +162,20 @@ export async function createProperty(req, res, next) {
   try {
     const body = propertySchema.parse(unflatten(req.body));
     const amenities = toArray(req.body.amenities);
+    const ownerId = await resolveOwnerId(req.user, body.ownerId);
+
+    // Pre-fill the rental agreement by copying the owner's most recently
+    // updated property that has one (one-time copy, not a shared record).
+    // Left empty when there's none - the PDF falls back to a generic default.
+    let rentalAgreement = body.rentalAgreement;
+    if (!rentalAgreement && ownerId) {
+      const source = await prisma.property.findFirst({
+        where: { ownerId, rentalAgreement: { not: "" } },
+        orderBy: { updatedAt: "desc" },
+        select: { rentalAgreement: true },
+      });
+      rentalAgreement = source?.rentalAgreement ?? "";
+    }
 
     const thumbnailFile = req.files?.thumbnail?.[0];
     const galleryFiles = req.files?.gallery || [];
@@ -193,6 +208,7 @@ export async function createProperty(req, res, next) {
         depositEnabled: body.depositEnabled,
         depositAmount: body.depositAmount,
         paymentInstructions: body.paymentInstructions,
+        rentalAgreement,
         paymentTerms: (() => {
           const terms = parsePaymentTerms(req.body.paymentTerms) ?? [];
           assertTermsSumTo100(terms);
@@ -201,7 +217,7 @@ export async function createProperty(req, res, next) {
         addOns: parseAddOns(req.body.addOns) ?? [],
         thumbnailUrl: thumbnail?.url ?? null,
         gallery: gallery.map((g) => g.url),
-        ownerId: await resolveOwnerId(req.user, body.ownerId),
+        ownerId,
       },
     });
 
@@ -240,6 +256,7 @@ export async function updateProperty(req, res, next) {
     if (flat.depositEnabled !== undefined) data.depositEnabled = body.depositEnabled;
     if (flat.depositAmount !== undefined) data.depositAmount = body.depositAmount;
     if (flat.paymentInstructions !== undefined) data.paymentInstructions = body.paymentInstructions;
+    if (flat.rentalAgreement !== undefined) data.rentalAgreement = body.rentalAgreement;
     const paymentTerms = parsePaymentTerms(req.body.paymentTerms);
     if (paymentTerms !== undefined) {
       assertTermsSumTo100(paymentTerms);

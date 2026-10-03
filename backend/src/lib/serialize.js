@@ -65,6 +65,7 @@ export function serializeProperty(p) {
     depositAmount: p.depositAmount ?? 0,
     addOns: p.addOns ?? [],
     paymentInstructions: p.paymentInstructions ?? "",
+    rentalAgreement: p.rentalAgreement ?? "",
     images: {
       thumbnail: p.thumbnailUrl ?? null,
       gallery: p.gallery ?? [],
@@ -154,6 +155,10 @@ export function serializeBooking(b) {
     paymentStatus: b.paymentStatus,
     cancelledBy: b.cancelledBy ?? null,
     cancellationReason: b.cancellationReason ?? null,
+    hasDocument: !!b.documentKey,
+    documentGeneratedAt: b.documentGeneratedAt ?? null,
+    signedCopyReceived: b.signedCopyReceived ?? false,
+    signedCopyAt: b.signedCopyAt ?? null,
     // Only present when the query loaded installments (a schedule was
     // generated for this booking) - absent, not an empty array, for every
     // legacy booking so the admin UI can tell "no schedule" from "not loaded".

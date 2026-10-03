@@ -41,8 +41,8 @@ async function accessToken(conn) {
 
 const base64url = (buf) => buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-async function buildRaw({ from, to, replyTo, subject, html, text }) {
-  const mail = new MailComposer({ from, to, replyTo: replyTo || undefined, subject, html, text });
+async function buildRaw({ from, to, replyTo, subject, html, text, attachments }) {
+  const mail = new MailComposer({ from, to, replyTo: replyTo || undefined, subject, html, text, attachments });
   return mail.compile().build();
 }
 
@@ -84,6 +84,7 @@ export function getSystemConnection() {
  * @param {boolean} [m.strict]  only use ownerId's own connection, no fallback (test email)
  * @param {boolean} [m.redact]  keep the body out of console output (temporary passwords)
  * @param {string} [m.bookingId]
+ * @param {Array<{filename: string, content: Buffer, contentType?: string}>} [m.attachments]
  * @returns {Promise<{ok: boolean, status: string, via?: string, error?: string}>}
  */
 export async function sendMail(m) {
@@ -102,7 +103,7 @@ export async function sendMail(m) {
     if (process.env.EMAIL_DRY_RUN === "true") {
       const c = candidates[0];
       const from = c ? { name: m.fromName || c.user.name, address: c.email } : "dry-run@localhost";
-      const raw = await buildRaw({ from, to: m.to, replyTo: m.replyTo, subject: m.subject, html: m.html, text: m.text });
+      const raw = await buildRaw({ from, to: m.to, replyTo: m.replyTo, subject: m.subject, html: m.html, text: m.text, attachments: m.attachments });
       console.log(`\n[EMAIL DRY RUN] ${m.kind} via ${c?.email || "(no sender)"}\n${m.redact ? "(body redacted)" : raw.toString()}\n`);
       await log({ ...base, status: "skipped", error: "dry run", connectionId: c?.id });
       return { ok: true, status: "skipped", via: c?.email };
@@ -124,6 +125,7 @@ export async function sendMail(m) {
           subject: m.subject,
           html: m.html,
           text: m.text,
+          attachments: m.attachments,
         });
         await gmailSend(conn, raw);
         await log({ ...base, status: "sent", connectionId: conn.id });

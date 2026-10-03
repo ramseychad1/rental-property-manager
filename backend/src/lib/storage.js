@@ -101,4 +101,47 @@ export async function deleteFile(urlOrKey) {
   }
 }
 
+// Private objects (booking PDFs): same bucket, but never exposed through a
+// URL - callers store only the key and stream it back via an authenticated
+// route. Local-disk fallback uses a directory that is NOT served statically.
+const PRIVATE_DIR = path.resolve(__dirname, "../../private-uploads");
+
+export async function savePrivate(buffer, { contentType = "application/pdf", ext = ".pdf" } = {}) {
+  const key = `private/${keyFor(`x${ext}`)}`;
+  if (s3Configured) {
+    await s3Client.send(
+      new PutObjectCommand({ Bucket: process.env.BUCKET, Key: key, Body: buffer, ContentType: contentType }),
+    );
+  } else {
+    const file = path.join(PRIVATE_DIR, key);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, buffer);
+  }
+  return key;
+}
+
+export async function readPrivate(key) {
+  if (!key || !key.startsWith("private/") || key.includes("..")) return null;
+  if (s3Configured) {
+    try {
+      const res = await s3Client.send(new GetObjectCommand({ Bucket: process.env.BUCKET, Key: key }));
+      return Buffer.from(await res.Body.transformToByteArray());
+    } catch (err) {
+      if (err.name === "NoSuchKey" || err.$metadata?.httpStatusCode === 404) return null;
+      throw err;
+    }
+  }
+  const file = path.join(PRIVATE_DIR, key);
+  return fs.existsSync(file) ? fs.readFileSync(file) : null;
+}
+
+export async function deletePrivate(key) {
+  if (!key || !key.startsWith("private/") || key.includes("..")) return;
+  if (s3Configured) {
+    await s3Client.send(new DeleteObjectCommand({ Bucket: process.env.BUCKET, Key: key })).catch(() => {});
+  } else {
+    fs.rm(path.join(PRIVATE_DIR, key), { force: true }, () => {});
+  }
+}
+
 export { UPLOADS_DIR };

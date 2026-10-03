@@ -330,6 +330,23 @@ export default function ItemFormPage({ mode = "create" }) {
               <h3 className="font-display text-lg font-semibold">Core details</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="form-private">Private listing</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Hidden from the public site. Only renters you invite (see Trusted Renters) can see and book it.
+                    </p>
+                  </div>
+                  <Switch
+                    id="form-private"
+                    data-testid="form-private"
+                    checked={!!watch("isPrivate")}
+                    onCheckedChange={(v) => setValue("isPrivate", v, { shouldDirty: true })}
+                  />
+                </div>
+              </div>
+
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="title">{vertical.item.singular} title</Label>
                 <Input id="title" data-testid="form-title" {...register("title")} />
@@ -549,23 +566,6 @@ export default function ItemFormPage({ mode = "create" }) {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                  <div>
-                    <Label htmlFor="form-private">Private listing</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Hidden from the public site. Only renters you invite (see Trusted Renters) can see and book it.
-                    </p>
-                  </div>
-                  <Switch
-                    id="form-private"
-                    data-testid="form-private"
-                    checked={!!watch("isPrivate")}
-                    onCheckedChange={(v) => setValue("isPrivate", v, { shouldDirty: true })}
-                  />
-                </div>
               </div>
             </div>
           </Card>

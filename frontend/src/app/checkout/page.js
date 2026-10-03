@@ -843,6 +843,18 @@ function CheckoutInner() {
           </p>
         )}
 
+        {confirmation.selectedAddOns?.length > 0 && (
+          <div className="mt-6 mx-auto max-w-sm rounded-2xl border p-4 text-left text-sm" data-testid="confirmation-addons">
+            <div className="font-semibold mb-2">Add-ons requested</div>
+            {confirmation.selectedAddOns.map((a) => (
+              <div key={a.id} className="flex justify-between">
+                <span>{a.label}</span>
+                <span>{formatCurrency(a.price)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Button asChild className="mt-8 rounded-2xl h-12 px-8">
           <Link href="/bookings">View My Bookings</Link>
         </Button>
@@ -1030,6 +1042,46 @@ function CheckoutInner() {
               </div>
             </div>
           </section>
+
+          {(property?.addOns ?? []).length > 0 && (
+            <section
+              className="rounded-3xl border border-[var(--color-border)] bg-white p-7 shadow-sm"
+              data-testid="checkout-addons"
+            >
+              <h2 className="text-lg font-semibold">Optional add-ons</h2>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-1 mb-4">
+                Extras you can add to this stay. They&apos;re included in your total and your rental agreement.
+              </p>
+              <div className="space-y-2">
+                {property.addOns.map((addOn) => {
+                  const checked = (draft.addOnIds ?? []).includes(addOn.id);
+                  return (
+                    <label
+                      key={addOn.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border p-3 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-3 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            update({
+                              propertyId: draft.propertyId,
+                              addOnIds: checked
+                                ? draft.addOnIds.filter((x) => x !== addOn.id)
+                                : [...(draft.addOnIds ?? []), addOn.id],
+                            })
+                          }
+                        />
+                        {addOn.label}
+                      </span>
+                      <span className="font-semibold text-sm">{formatCurrency(addOn.price)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="rounded-3xl border border-[var(--color-border)] bg-white p-7 shadow-sm">
             <StepHeader step="3" title="Guest Information" required />

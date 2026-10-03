@@ -488,6 +488,13 @@ export async function updateBookingAddOns(req, res, next) {
       }
     });
 
+    // Keep an already-generated agreement PDF in step with the new selections.
+    if (booking.documentKey) {
+      await generateBookingDocument(booking.id).catch((err) =>
+        console.error("[DOCUMENT] regeneration after add-on change failed:", err.message),
+      );
+    }
+
     const updated = await prisma.booking.findUnique({
       where: { id: booking.id },
       include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },

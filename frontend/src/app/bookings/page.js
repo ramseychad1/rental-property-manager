@@ -142,6 +142,13 @@ function BookingCard({ b }) {
             </div>
           </div>
 
+          {b.selectedAddOns?.length > 0 && (
+            <div className="text-xs text-[var(--color-muted-foreground)]" data-testid="booking-addons">
+              <span className="font-medium text-[var(--color-foreground)]">Add-ons:</span>{" "}
+              {b.selectedAddOns.map((a) => `${a.label} (${formatCurrency(a.price)})`).join(", ")}
+            </div>
+          )}
+
           {/* Footer */}
           {(property?._id || ["accepted", "booked"].includes(b.bookingStatus)) && (
             <div className="mt-auto pt-1 flex justify-end gap-2">

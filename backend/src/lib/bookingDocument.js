@@ -49,6 +49,25 @@ function row(doc, left, right, { bold = false } = {}) {
   doc.x = x;
 }
 
+// A drawn checkbox (Helvetica has no check glyph) with the label and price.
+function checkboxRow(doc, label, price, checked) {
+  const x = doc.page.margins.left;
+  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const y = doc.y;
+  const box = 10;
+  doc.lineWidth(0.8).strokeColor(INK).rect(x, y + 1, box, box).stroke();
+  if (checked) {
+    doc.moveTo(x + 2, y + 3).lineTo(x + box - 2, y + box - 1).stroke();
+    doc.moveTo(x + box - 2, y + 3).lineTo(x + 2, y + box - 1).stroke();
+  }
+  doc.font(checked ? "Helvetica-Bold" : "Helvetica").fontSize(10).fillColor(INK);
+  doc.text(label, x + box + 8, y, { width: w * 0.65 - box - 8 });
+  const after = doc.y;
+  doc.text(price, x + w * 0.65, y, { width: w * 0.35, align: "right" });
+  doc.y = Math.max(after, doc.y) + 2;
+  doc.x = x;
+}
+
 function priceLines(b) {
   const pricing = b.pricing || {};
   const segments = pricing.segments || [];
@@ -58,7 +77,9 @@ function priceLines(b) {
   ]);
   if (pricing.cleaningFee) out.push(["Cleaning fee", money(pricing.cleaningFee)]);
   if (pricing.serviceFee) out.push(["Service fee", money(pricing.serviceFee)]);
-  for (const a of pricing.addOns || []) out.push([a.label, money(a.price)]);
+  // One summed line; the individual add-ons are itemized in their own section.
+  const addOnsTotal = (b.selectedAddOns?.length ? b.selectedAddOns : pricing.addOns || []).reduce((n, a) => n + (a.price || 0), 0);
+  if (addOnsTotal) out.push(["Add-ons selected", money(addOnsTotal)]);
   if (pricing.taxes) out.push([`Taxes (${pricing.taxRate}%)`, money(pricing.taxes)]);
   return out;
 }
@@ -102,6 +123,21 @@ export function buildBookingPdf(b) {
   for (const [l, r] of priceLines(b)) row(doc, l, r);
   doc.moveDown(0.3);
   row(doc, "Total", money(b.totalAmount), { bold: true });
+
+  // Every add-on the property offers as a checkbox list, ticked where the
+  // renter selected it. Anything on the booking that the property has since
+  // removed from its catalog is still listed (ticked) so the agreement matches
+  // what was booked.
+  const selected = b.selectedAddOns?.length ? b.selectedAddOns : b.pricing?.addOns || [];
+  const offered = Array.isArray(p.addOns) ? p.addOns : [];
+  const addOnList = [...offered, ...selected.filter((a) => !offered.some((o) => o.id === a.id))];
+  if (addOnList.length) {
+    heading(doc, "Add-ons Selected");
+    for (const a of addOnList) {
+      const checked = selected.some((x) => x.id === a.id);
+      checkboxRow(doc, a.label, money(a.price), checked);
+    }
+  }
 
   const installments = b.installments || [];
   if (installments.length) {

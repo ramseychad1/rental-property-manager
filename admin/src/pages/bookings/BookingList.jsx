@@ -65,7 +65,13 @@ const LIMIT = 10;
 // payment-schedule installment has been marked paid - see updateAddOns.
 function AddOnsEditor({ booking, onSaved }) {
   const qc = useQueryClient();
-  const catalog = booking.propertyId?.addOns || [];
+  // Current catalog plus anything already on the booking that the property has
+  // since renamed or removed - the snapshot must always stay visible.
+  const catalogItems = booking.propertyId?.addOns || [];
+  const catalog = [
+    ...catalogItems,
+    ...(booking.selectedAddOns || []).filter((a) => !catalogItems.some((c) => c.id === a.id)),
+  ];
   const [selected, setSelected] = useState(() => new Set((booking.selectedAddOns || []).map((a) => a.id)));
 
   useEffect(() => {

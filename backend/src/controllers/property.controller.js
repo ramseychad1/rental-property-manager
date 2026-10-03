@@ -1,3 +1,4 @@
+import { normalizeNewlines } from "../lib/textClean.js";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { ok, fail, ApiError } from "../lib/response.js";
@@ -84,8 +85,8 @@ const propertySchema = z.object({
   ownerId: z.string().trim().optional(),
   depositEnabled: z.preprocess((v) => (v === "true" ? true : v === "false" ? false : v), z.boolean().default(false)),
   depositAmount: z.coerce.number().min(0).default(0),
-  paymentInstructions: z.string().trim().max(2000).optional().default(""),
-  rentalAgreement: z.string().trim().max(20000).optional().default(""),
+  paymentInstructions: z.string().transform(normalizeNewlines).pipe(z.string().trim().max(2000)).optional().default(""),
+  rentalAgreement: z.string().transform(normalizeNewlines).pipe(z.string().trim().max(20000)).optional().default(""),
   price: z
     .object({
       nightly: z.coerce.number().min(0).default(0),

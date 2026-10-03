@@ -5,6 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import { fmtStayDate } from "./emailTemplates.js";
+import { cleanForPdf } from "./textClean.js";
 import { prisma } from "./prisma.js";
 import { savePrivate, readPrivate, deletePrivate } from "./storage.js";
 
@@ -88,6 +89,10 @@ export function buildBookingPdf(b) {
   const p = b.property;
   const owner = p.owner || b.owner || null;
   const doc = new PDFDocument({ size: "LETTER", margin: 54, info: { Title: `Booking confirmation ${b.bookingId}` } });
+  // Every string drawn goes through the cleaner - owner-pasted rules text can
+  // contain characters the built-in font can't render.
+  const drawText = doc.text.bind(doc);
+  doc.text = (str, ...args) => drawText(typeof str === "string" ? cleanForPdf(str) : str, ...args);
   const chunks = [];
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve, reject) => {

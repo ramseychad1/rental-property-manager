@@ -5,7 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import { fmtStayDate } from "./emailTemplates.js";
-import { cleanForPdf } from "./textClean.js";
+import { cleanForPdf, reflowParagraphs } from "./textClean.js";
 import { prisma } from "./prisma.js";
 import { savePrivate, readPrivate, deletePrivate } from "./storage.js";
 
@@ -168,7 +168,7 @@ export function buildBookingPdf(b) {
   doc.addPage();
   doc.font("Helvetica-Bold").fontSize(16).fillColor(INK).text("Rental Agreement and House Rules");
   doc.moveDown(0.6);
-  doc.font("Helvetica").fontSize(10).fillColor(INK).text((p.rentalAgreement || "").trim() || DEFAULT_RENTAL_AGREEMENT, { lineGap: 2 });
+  doc.font("Helvetica").fontSize(10).fillColor(INK).text(reflowParagraphs((p.rentalAgreement || "").trim()) || DEFAULT_RENTAL_AGREEMENT, { lineGap: 2 });
 
   // --- Signature ---
   doc.moveDown(2);

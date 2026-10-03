@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { usPhone, usState, usZip, street, city, orEmpty } from "../lib/usContact.js";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma.js";
 import { ok, fail, ApiError } from "../lib/response.js";
@@ -27,13 +28,20 @@ export async function updateProfile(req, res, next) {
 
     const schema = z.object({
       name: z.string().trim().min(1).optional(),
-      phone: z.string().trim().optional(),
+      phone: orEmpty(usPhone).optional(),
+      addressStreet: orEmpty(street).optional(),
+      addressCity: orEmpty(city).optional(),
+      addressState: orEmpty(usState).optional(),
+      addressZip: orEmpty(usZip).optional(),
     });
     const body = schema.parse(req.body);
 
     const data = {};
     if (body.name) data.name = body.name;
-    if (body.phone !== undefined) data.phone = body.phone;
+    // An empty string clears the field.
+    for (const k of ["phone", "addressStreet", "addressCity", "addressState", "addressZip"]) {
+      if (body[k] !== undefined) data[k] = body[k] || null;
+    }
 
     if (req.file) {
       if (req.user.picture) await deleteFile(req.user.picture);

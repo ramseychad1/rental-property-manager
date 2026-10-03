@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
+import UsContactFields from "@/components/common/UsContactFields";
+import { EMPTY_CONTACT, contactFromUser, validateContact } from "@/lib/usContact";
 
 // ── Password field with show/hide toggle ─────────────────────────────────────
 function PasswordInput({ id, value, onChange, placeholder, testId }) {
@@ -117,6 +119,7 @@ function SettingsInner() {
 
   // Profile state
   const [name, setName] = useState("");
+  const [contact, setContact] = useState(EMPTY_CONTACT);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -131,6 +134,7 @@ function SettingsInner() {
   useEffect(() => {
     if (user) {
       setName(user.name || "");
+      setContact(contactFromUser(user));
       setAvatarPreview(user.picture || null);
     }
   }, [user]);
@@ -151,11 +155,21 @@ function SettingsInner() {
   const onSaveProfile = async (e) => {
     e.preventDefault();
     if (!name.trim()) return toast.error("Name cannot be empty.");
+    // Contact details are optional here, but if any are filled in they must be valid.
+    if (Object.values(contact).some((v) => v.trim())) {
+      const contactError = validateContact(contact);
+      if (contactError) return toast.error(contactError);
+    }
     setSavingProfile(true);
     try {
       const formData = new FormData();
 
       formData.append("name", name.trim());
+      formData.append("phone", contact.phone);
+      formData.append("addressStreet", contact.street.trim());
+      formData.append("addressCity", contact.city.trim());
+      formData.append("addressState", contact.state);
+      formData.append("addressZip", contact.zip.trim());
 
       if (avatarFile) {
         formData.append("file", avatarFile);
@@ -281,6 +295,10 @@ function SettingsInner() {
               placeholder="Your full name"
               data-testid="settings-name"
             />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <UsContactFields value={contact} onChange={setContact} idPrefix="settings" />
           </div>
 
           {/* Email — read only */}

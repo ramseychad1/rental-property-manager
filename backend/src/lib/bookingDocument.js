@@ -89,6 +89,10 @@ export function buildBookingPdf(b) {
 
   heading(doc, "Renter and stay");
   field(doc, "Renter:", [b.guestName, b.guestEmail, b.guestPhone].filter(Boolean).join("  ·  "));
+  const renterAddress = [b.guestStreet, [b.guestCity, [b.guestState, b.guestZip].filter(Boolean).join(" ")].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(", ");
+  if (renterAddress) field(doc, "Address:", renterAddress);
   field(doc, "Check-in:", fmtStayDate(b.checkIn));
   field(doc, "Check-out:", fmtStayDate(b.checkOut));
   field(doc, "Nights:", String(b.totalNights));

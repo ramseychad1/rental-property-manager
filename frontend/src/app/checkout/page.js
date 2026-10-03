@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import PhoneInput from "react-phone-number-input";
-import "react-phone-number-input/style.css";
+import UsContactFields from "@/components/common/UsContactFields";
+import { EMPTY_CONTACT, contactFromUser, validateContact } from "@/lib/usContact";
 
 import {
   Loader2,
@@ -623,7 +623,7 @@ function AccountSection() {
 }
 
 function CheckoutInner() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const { draft, update, reset } = useBooking();
 
   const isLoggedIn = !!user;
@@ -637,8 +637,9 @@ function CheckoutInner() {
   const [guestName, setGuestName] = useState(user?.name || "");
   const [guestEmail, setGuestEmail] = useState(user?.email || "");
 
-  const [phone, setPhone] = useState("");
-  const [country, setCountry] = useState("");
+  // Phone + US address; prefilled from the profile saved with the renter's
+  // previous booking.
+  const [contact, setContact] = useState(() => (user ? contactFromUser(user) : EMPTY_CONTACT));
   const [notes, setNotes] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
@@ -678,6 +679,16 @@ function CheckoutInner() {
     setGuestName(user?.name || "");
     setGuestEmail(user?.email || "");
   }, [user?.email, user?.name]);
+
+  // Fill in saved contact details once the user loads, without clobbering
+  // anything the renter has already started typing.
+  useEffect(() => {
+    if (!user) return;
+    setContact((cur) => {
+      const saved = contactFromUser(user);
+      return Object.fromEntries(Object.keys(cur).map((k) => [k, cur[k] || saved[k]]));
+    });
+  }, [user]);
 
   useEffect(() => {
     if (!draft.propertyId || !draft.checkIn || !draft.checkOut) {
@@ -743,6 +754,12 @@ function CheckoutInner() {
       return;
     }
 
+    const contactError = validateContact(contact);
+    if (contactError) {
+      toast.error(contactError);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -763,8 +780,11 @@ function CheckoutInner() {
           guestInfo: {
             name: guestName,
             email: guestEmail,
-            phone,
-            country,
+            phone: contact.phone,
+            street: contact.street.trim(),
+            city: contact.city.trim(),
+            state: contact.state,
+            zip: contact.zip.trim(),
           },
 
           notes,
@@ -776,6 +796,9 @@ function CheckoutInner() {
 
       toast.success("Booking confirmed");
       setConfirmation(res.data);
+      // The backend saved the contact details to the profile; reload the user
+      // so the next booking is prefilled.
+      refresh().catch(() => {});
       reset();
     } catch (err) {
       toast.error(err.message || "Could not complete booking");
@@ -1035,29 +1058,7 @@ function CheckoutInner() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Phone Number</Label>
-
-                <div className="border rounded-2xl px-4 py-3 bg-white">
-                  <PhoneInput
-                    international
-                    defaultCountry="US"
-                    value={phone}
-                    onChange={setPhone}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Country</Label>
-
-                <Input
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="h-12 rounded-2xl"
-                  required
-                />
-              </div>
+              <UsContactFields value={contact} onChange={setContact} inputClassName="h-12 rounded-2xl" idPrefix="checkout" />
 
               <div className="md:col-span-2 space-y-2">
                 <Label>Special Requests</Label>

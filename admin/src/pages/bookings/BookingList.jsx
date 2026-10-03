@@ -454,8 +454,14 @@ console.log(data)
                         {active.userId?.email || active.guestInfo?.email || "-"}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {active.guestInfo?.phone || "-"} - {active.guestInfo?.country || "-"}
+                        {active.guestInfo?.phone || "-"}
                       </div>
+                      {active.guestInfo?.street && (
+                        <div className="text-xs text-muted-foreground" data-testid="guest-address">
+                          {active.guestInfo.street}, {active.guestInfo.city}, {active.guestInfo.state}{" "}
+                          {active.guestInfo.zip}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>

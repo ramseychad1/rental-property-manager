@@ -7,6 +7,7 @@ import { dateOnly } from "../lib/serialize.js";
 import { notifyBookingCreated, notifyBookingEvent } from "../lib/notifications.js";
 import { seasonForKey } from "../lib/seasonRange.js";
 import { isStaff, isSuperAdmin, propertyScope, bookingScope, findViewableProperty } from "../lib/access.js";
+import { usPhone, usState, usZip, street, city } from "../lib/usContact.js";
 import { buildInstallments } from "../lib/paymentSchedule.js";
 import { generateBookingDocument, loadBookingDocument } from "../lib/bookingDocument.js";
 
@@ -133,8 +134,11 @@ const createBookingSchema = z.object({
   guestInfo: z.object({
     name: z.string().trim().min(1, "Name is required"),
     email: z.string().trim().email(),
-    phone: z.string().trim().optional().default(""),
-    country: z.string().trim().optional(),
+    phone: usPhone,
+    street,
+    city,
+    state: usState,
+    zip: usZip,
   }),
   notes: z.string().trim().optional().default(""),
   addOnIds: z.array(z.string().trim().min(1)).optional().default([]),
@@ -178,7 +182,11 @@ export async function createBooking(req, res, next) {
         totalNights: nights,
         guestName: body.guestInfo.name,
         guestEmail: body.guestInfo.email,
-        guestPhone: body.guestInfo.phone || null,
+        guestPhone: body.guestInfo.phone,
+        guestStreet: body.guestInfo.street,
+        guestCity: body.guestInfo.city,
+        guestState: body.guestInfo.state,
+        guestZip: body.guestInfo.zip,
         notes: body.notes,
         pricing,
         totalAmount: pricing.total,
@@ -186,6 +194,22 @@ export async function createBooking(req, res, next) {
       },
       include: { property: true, user: true },
     });
+
+    // Remember the renter's contact details for their next request.
+    if (req.user) {
+      await prisma.user
+        .update({
+          where: { id: req.user.id },
+          data: {
+            phone: body.guestInfo.phone,
+            addressStreet: body.guestInfo.street,
+            addressCity: body.guestInfo.city,
+            addressState: body.guestInfo.state,
+            addressZip: body.guestInfo.zip,
+          },
+        })
+        .catch((err) => console.error("[BOOKING] couldn't save contact to profile:", err.message));
+    }
 
     void notifyBookingCreated(booking);
 

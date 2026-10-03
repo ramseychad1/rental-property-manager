@@ -11,7 +11,7 @@ import { cleanUrl } from "../lib/emailTemplates.js";
 // owner's private properties (see lib/access.js). Only the SHA-256 of the token
 // is stored, so a database read can't reveal working links.
 
-const INVITE_TTL_DAYS = 14;
+const INVITE_TTL_DAYS = 7;
 const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
 const inviteSchema = z.object({
@@ -45,6 +45,30 @@ function inviteUrl(token) {
   return `${site}/invite/${token}`;
 }
 
+// Revokes any live invite to this email, creates a fresh one and emails it.
+// One live invite per email: re-inviting (or resending) replaces the earlier link.
+async function issueInvite({ owner, email, name }) {
+  await prisma.ownerInvite.updateMany({
+    where: { ownerId: owner.id, email, claimedAt: null, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+
+  const token = crypto.randomBytes(32).toString("base64url");
+  const invite = await prisma.ownerInvite.create({
+    data: {
+      ownerId: owner.id,
+      email,
+      inviteeName: name || "",
+      tokenHash: hashToken(token),
+      expiresAt: new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000),
+    },
+  });
+
+  const url = inviteUrl(token);
+  void notifyInvite({ owner, email, inviteeName: name, inviteUrl: url, days: INVITE_TTL_DAYS });
+  return { invite, url };
+}
+
 export async function createInvite(req, res, next) {
   try {
     const body = inviteSchema.parse(req.body);
@@ -67,24 +91,7 @@ export async function createInvite(req, res, next) {
       if (grant) throw new ApiError("That person is already one of your trusted renters.", 409);
     }
 
-    // One live invite per email: re-inviting replaces (revokes) the earlier link.
-    await prisma.ownerInvite.updateMany({
-      where: { ownerId: owner.id, email, claimedAt: null, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-
-    const token = crypto.randomBytes(32).toString("base64url");
-    const invite = await prisma.ownerInvite.create({
-      data: {
-        ownerId: owner.id,
-        email,
-        tokenHash: hashToken(token),
-        expiresAt: new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000),
-      },
-    });
-
-    const url = inviteUrl(token);
-    void notifyInvite({ owner, email, inviteeName: body.name, inviteUrl: url, days: INVITE_TTL_DAYS });
+    const { invite, url } = await issueInvite({ owner, email, name: body.name });
 
     // The link is returned once so the owner can also share it themselves
     // (text message, etc.) - it can't be recovered later.
@@ -106,6 +113,30 @@ export async function listInvites(req, res, next) {
       include: { owner: { select: { id: true, name: true } } },
     });
     return ok(res, invites.map(serializeInvite));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Replaces a pending invite (live or expired) with a fresh link and emails it again.
+export async function resendInvite(req, res, next) {
+  try {
+    const existing = await prisma.ownerInvite.findFirst({
+      where: { id: req.params.id, ...ownerWhere(req.user), claimedAt: null, revokedAt: null },
+      include: { owner: true },
+    });
+    if (!existing) throw new ApiError("Invitation not found.", 404);
+
+    const { invite, url } = await issueInvite({
+      owner: existing.owner,
+      email: existing.email,
+      name: existing.inviteeName,
+    });
+    return res.json({
+      success: true,
+      message: "Invitation resent",
+      data: { ...serializeInvite(invite), inviteUrl: url },
+    });
   } catch (err) {
     next(err);
   }

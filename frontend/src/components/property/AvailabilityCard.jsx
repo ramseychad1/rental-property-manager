@@ -382,7 +382,7 @@ export default function AvailabilityCard({
         onClick={handleBook}
         data-testid="book-now-btn"
       >
-        {checkIn && checkOut ? "Book Now" : "Check Availability"}
+        {checkIn && checkOut ? "Request Booking" : "Check Availability"}
       </Button>
     </div>
   );

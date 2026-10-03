@@ -1175,8 +1175,8 @@ function CheckoutInner() {
             {submitting && <Loader2 className="h-5 w-5 animate-spin mr-2" />}
 
             {isLoggedIn
-              ? `Reserve Now • ${formatCurrency(pricing?.total || 0)}`
-              : "Sign In To Reserve"}
+              ? `Request Booking • ${formatCurrency(pricing?.total || 0)}`
+              : "Sign In To Request Booking"}
           </Button>
         </form>
       </div>

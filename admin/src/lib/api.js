@@ -269,6 +269,11 @@ export const invitesApi = {
     const { data } = await http.get("/invite");
     return data?.data || [];
   },
+  // Replaces the pending invite with a fresh link (and emails it). Returns the new `inviteUrl`.
+  resend: async (id) => {
+    const { data } = await http.post(`/invite/${id}/resend`);
+    return data?.data;
+  },
   cancelInvite: async (id) => {
     const { data } = await http.delete(`/invite/${id}`);
     return data;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createInvite,
+  resendInvite,
   listInvites,
   revokeInvite,
   previewInvite,
@@ -21,6 +22,7 @@ router.get("/grants", requireStaff, listGrants);
 router.delete("/grants/:id", requireStaff, revokeGrant);
 router.get("/", requireStaff, listInvites);
 router.post("/", requireStaff, createInvite);
+router.post("/:id/resend", requireStaff, resendInvite);
 router.delete("/:id", requireStaff, revokeInvite);
 
 export default router;

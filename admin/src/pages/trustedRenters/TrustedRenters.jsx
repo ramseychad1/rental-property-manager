@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Loader2, Send, UserCheck, UserMinus, X } from "lucide-react";
+import { Check, Copy, Loader2, RefreshCw, Send, UserCheck, UserMinus, X } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
@@ -65,6 +65,16 @@ export default function TrustedRentersPage() {
       qc.invalidateQueries({ queryKey: KEYS.invites });
     },
     onError: (err) => toast.error(err.normalizedMessage || "Could not create the invitation"),
+  });
+
+  const resend = useMutation({
+    mutationFn: (id) => invitesApi.resend(id),
+    onSuccess: (data) => {
+      setCreated({ email: data.email, inviteUrl: data.inviteUrl, resent: true });
+      setCopied(false);
+      qc.invalidateQueries({ queryKey: KEYS.invites });
+    },
+    onError: (err) => toast.error(err.normalizedMessage || "Could not resend the invitation"),
   });
 
   const cancel = useMutation({
@@ -200,7 +210,7 @@ export default function TrustedRentersPage() {
                 {isSuperAdmin && <TableHead>Owner</TableHead>}
                 <TableHead>Sent</TableHead>
                 <TableHead>Expires</TableHead>
-                <TableHead className="w-24" />
+                <TableHead className="w-48" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,7 +222,21 @@ export default function TrustedRentersPage() {
                   <TableCell>
                     {i.expired ? <Badge variant="secondary">Expired</Badge> : fmtDate(i.expiresAt)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={resend.isPending}
+                      onClick={() => resend.mutate(i._id)}
+                      data-testid="resend-invite"
+                    >
+                      {resend.isPending && resend.variables === i._id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}{" "}
+                      Resend
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -233,10 +257,10 @@ export default function TrustedRentersPage() {
       <Dialog open={!!created} onOpenChange={(o) => !o && setCreated(null)}>
         <DialogContent data-testid="invite-created-dialog">
           <DialogHeader>
-            <DialogTitle>Invitation created</DialogTitle>
+            <DialogTitle>{created?.resent ? "Invitation resent" : "Invitation created"}</DialogTitle>
             <DialogDescription>
               We emailed <strong>{created?.email}</strong> from your connected Gmail (Settings, Email). If you haven&apos;t
-              connected one, send them this link yourself. It works once, expires in 14 days, and can&apos;t be shown again.
+              connected one, send them this link yourself. It works once, expires in 7 days, and can&apos;t be shown again.{created?.resent && " Any earlier link to this address no longer works."}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-2 rounded-lg border px-3 py-2">

@@ -88,7 +88,11 @@ function BookingCard({ b }) {
             {/* Status badges */}
             <div className="flex flex-wrap gap-1.5 shrink-0">
               <StatusBadge status={b.bookingStatus} map={BOOKING_STATUS} />
-              <StatusBadge status={b.paymentStatus} map={PAYMENT_STATUS} />
+              {/* "Payment Pending" only makes sense once the owner has accepted; a
+                  pending, rejected or cancelled booking shows payment only if money moved. */}
+              {(["accepted", "booked"].includes(b.bookingStatus) || ["paid", "refunded"].includes(b.paymentStatus)) && (
+                <StatusBadge status={b.paymentStatus} map={PAYMENT_STATUS} />
+              )}
             </div>
           </div>
 

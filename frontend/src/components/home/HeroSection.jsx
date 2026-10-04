@@ -10,10 +10,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AvailabilityCard from "@/components/property/AvailabilityCard";
 import { api } from "@/services/api";
 import { getIcon } from "@/lib/homeIcons";
+import { useAuth } from "@/context/AuthContext";
 
 export default function HeroSection({ initialProperties = [], content: heroContent }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const { isAuthenticated } = useAuth();
   const [properties, setProperties] = useState(initialProperties);
+  // False only while the client-side fetch below is in flight; lets us tell
+  // "still loading" apart from "there are no public properties".
+  const [loaded, setLoaded] = useState(initialProperties.length > 0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [seasonsMap, setSeasonsMap] = useState({});
   const [seasonsLoading, setSeasonsLoading] = useState(false);
@@ -34,6 +39,9 @@ export default function HeroSection({ initialProperties = [], content: heroConte
       })
       .catch(() => {
         if (!cancelled) setProperties([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
       });
     return () => { cancelled = true; };
   }, [initialProperties.length])
@@ -154,6 +162,25 @@ export default function HeroSection({ initialProperties = [], content: heroConte
         <div className="lg:sticky lg:top-12">
           {activeProperty ? (
             <AvailabilityCard key={activePropertyId} property={activeProperty} seasons={activeSeasons} />
+          ) : loaded ? (
+            <div
+              className="rounded-2xl bg-white/90 backdrop-blur-sm p-7 text-center shadow-lg"
+              data-testid="hero-no-properties"
+            >
+              <h2 className="font-display text-xl font-bold text-[var(--color-foreground)]">
+                Properties are available by invitation
+              </h2>
+              <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+                {isAuthenticated
+                  ? "There are no public listings right now. Browse the properties shared with you."
+                  : "There are no public listings right now. If an owner has invited you, sign in to see their properties and request a stay."}
+              </p>
+              <Button asChild className="mt-5">
+                <Link href={isAuthenticated ? "/properties" : "/login"}>
+                  {isAuthenticated ? "Browse properties" : "Sign in"}
+                </Link>
+              </Button>
+            </div>
           ) : (
             <Skeleton className="h-[340px] w-full rounded-2xl" />
           )}

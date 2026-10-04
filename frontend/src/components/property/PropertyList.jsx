@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import PropertyCard from "@/components/property/PropertyCard";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/services/api";
@@ -33,6 +35,16 @@ export default function PropertyList({ initialProperties, emptyMessage }) {
     return (
       <div className="py-20 text-center">
         <p className="text-lg text-[var(--color-muted-foreground)]">{emptyMessage}</p>
+        <p className="mt-2 text-[var(--color-muted-foreground)]" data-testid="invite-only-note">
+          {user
+            ? "Some properties are available by invite only."
+            : "Some properties are available by invite only. Sign in to see properties you have been invited to."}
+        </p>
+        {!user && (
+          <Button asChild className="mt-6" data-testid="empty-sign-in">
+            <Link href="/login">Sign In</Link>
+          </Button>
+        )}
       </div>
     );
   }

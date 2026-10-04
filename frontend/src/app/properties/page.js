@@ -8,7 +8,7 @@ const DEFAULTS = {
   backgroundColor: "#0b7c83",
   textColor: "#ffffff",
   features: [],
-  emptyMessage: "No properties available right now. Check back soon.",
+  emptyMessage: "No properties available right now.",
   metaDescription: "",
 };
 

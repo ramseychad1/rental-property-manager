@@ -246,7 +246,7 @@ export const SECTION_DEFAULTS = {
       { title: "Stress Free", subtitle: "Easy booking", icon: "ShieldCheck" },
       { title: "Local Support", subtitle: "Here for you", icon: "Headphones" },
     ],
-    emptyMessage: "No properties available right now. Check back soon.",
+    emptyMessage: "No properties available right now.",
     metaDescription: "Browse our vacation rental properties and book your stay.",
   },
   servicesPage: {

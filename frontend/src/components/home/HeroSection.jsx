@@ -79,7 +79,7 @@ export default function HeroSection({ initialProperties = [], content: heroConte
   const next = () => goTo((activeIndex + 1) % total);
 
   return (
-    <section className="relative xl:h-[676px] lg:py-12 py-16 overflow-hidden" data-testid="home-hero">
+    <section className="relative xl:min-h-[676px] lg:py-12 py-16 overflow-hidden" data-testid="home-hero">
       {heroContent.bgImage ? (
         <Image
           src={heroContent.bgImage}

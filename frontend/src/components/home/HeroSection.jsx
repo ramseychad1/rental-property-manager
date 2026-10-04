@@ -14,7 +14,8 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function HeroSection({ initialProperties = [], content: heroContent }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const userId = user?._id ?? null;
   const [properties, setProperties] = useState(initialProperties);
   // False only while the client-side fetch below is in flight; lets us tell
   // "still loading" apart from "there are no public properties".
@@ -29,13 +30,24 @@ export default function HeroSection({ initialProperties = [], content: heroConte
   const activeSeasons = activePropertyId ? (seasonsMap[activePropertyId] ?? null) : null;
   const headlineLines = String(heroContent.headline ?? "").split("\n");
 
+  // The server renders only public properties (no session cookie reaches it).
+  // Once someone is signed in, refetch from the browser so private properties
+  // they've been invited to (or own) show in the hero too - the API already
+  // scopes the list to what they may see.
   useEffect(() => {
-    if (initialProperties.length > 0) return undefined;
+    if (!userId && initialProperties.length > 0) {
+      setProperties(initialProperties);
+      setLoaded(true);
+      return undefined;
+    }
 
     let cancelled = false;
     api.listProperties()
       .then((d) => {
-        if (!cancelled) setProperties((d.data ?? []).filter((p) => !p.isPrivate));
+        if (cancelled) return;
+        const list = d.data ?? [];
+        setProperties(userId ? list : list.filter((p) => !p.isPrivate));
+        setActiveIndex(0);
       })
       .catch(() => {
         if (!cancelled) setProperties([]);
@@ -44,7 +56,7 @@ export default function HeroSection({ initialProperties = [], content: heroConte
         if (!cancelled) setLoaded(true);
       });
     return () => { cancelled = true; };
-  }, [initialProperties.length])
+  }, [userId, initialProperties])
 
 
   useEffect(() => {

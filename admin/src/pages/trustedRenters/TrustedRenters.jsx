@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -20,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { invitesApi } from "@/lib/api";
+import { invitesApi, usersApi } from "@/lib/api";
 import { fmtDate } from "@/lib/formatters";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -44,10 +45,12 @@ async function copyText(text) {
 const KEYS = { invites: ["invites"], grants: ["grants"] };
 
 export default function TrustedRentersPage() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  // Super Admin only: whose private properties the invite unlocks ("" = my own).
+  const [onBehalfOf, setOnBehalfOf] = useState("");
   const [created, setCreated] = useState(null); // { email, inviteUrl }
   const [copied, setCopied] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState(null);
@@ -55,10 +58,22 @@ export default function TrustedRentersPage() {
   const invites = useQuery({ queryKey: KEYS.invites, queryFn: invitesApi.listInvites });
   const grants = useQuery({ queryKey: KEYS.grants, queryFn: invitesApi.listGrants });
 
+  const staff = useQuery({
+    queryKey: ["staff-owners"],
+    queryFn: () => usersApi.list({ role: "staff", active: "true", limit: 100 }),
+    enabled: isSuperAdmin,
+  });
+  const staffList = staff.data?.users || [];
+  const ownerForInvite = staffList.find((u) => u.id === (onBehalfOf || user?._id || user?.id));
+
   const invite = useMutation({
-    mutationFn: () => invitesApi.create({ email, name }),
+    mutationFn: () => invitesApi.create({ email, name, ...(onBehalfOf && { ownerId: onBehalfOf }) }),
     onSuccess: (data) => {
-      setCreated({ email: data.email, inviteUrl: data.inviteUrl });
+      setCreated({
+        email: data.email,
+        inviteUrl: data.inviteUrl,
+        ownerName: onBehalfOf && ownerForInvite ? ownerForInvite.name : null,
+      });
       setCopied(false);
       setEmail("");
       setName("");
@@ -122,6 +137,30 @@ export default function TrustedRentersPage() {
 
       <Card className="p-5 rounded-xl mb-6">
         <form onSubmit={submit} className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          {isSuperAdmin && (
+            <div className="space-y-1.5 md:col-span-3">
+              <Label>Invite on behalf of</Label>
+              <Select value={onBehalfOf || "me"} onValueChange={(v) => setOnBehalfOf(v === "me" ? "" : v)}>
+                <SelectTrigger data-testid="invite-on-behalf">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">Myself ({user?.name})</SelectItem>
+                  {staffList
+                    .filter((u) => u.id !== (user?._id || user?.id))
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The renter will be able to see this person&apos;s private properties, and the invitation is sent from
+                their connected Gmail.
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="invite-email">Email</Label>
             <Input
@@ -259,7 +298,7 @@ export default function TrustedRentersPage() {
           <DialogHeader>
             <DialogTitle>{created?.resent ? "Invitation resent" : "Invitation created"}</DialogTitle>
             <DialogDescription>
-              We emailed <strong>{created?.email}</strong> from your connected Gmail (Settings, Email). If you haven&apos;t
+              We emailed <strong>{created?.email}</strong> from {created?.ownerName ? `${created.ownerName}\u2019s` : "your"} connected Gmail (Settings, Email). If you haven&apos;t
               connected one, send them this link yourself. It works once, expires in 7 days, and can&apos;t be shown again.{created?.resent && " Any earlier link to this address no longer works."}
             </DialogDescription>
           </DialogHeader>

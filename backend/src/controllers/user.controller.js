@@ -97,10 +97,14 @@ export async function listAllUsers(req, res, next) {
         { email: { contains: String(search), mode: "insensitive" } },
       ];
     }
-    if (role && role !== "all") {
+    if (role === "staff") {
+      // Anyone who can own properties / send invites.
+      where.role = { in: ["Owner", "SuperAdmin"] };
+    } else if (role && role !== "all") {
       // The admin UI labels Guest accounts "User".
       where.role = role === "User" ? "Guest" : role;
     }
+    if (req.query.active === "true") where.isActive = true;
 
     const [users, totalCount] = await Promise.all([
       prisma.user.findMany({

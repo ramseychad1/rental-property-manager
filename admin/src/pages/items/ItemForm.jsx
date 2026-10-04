@@ -126,7 +126,7 @@ export default function ItemFormPage({ mode = "create" }) {
   const [rentalAgreement, setRentalAgreement] = useState("");
   const { data: ownerData } = useQuery({
     queryKey: ["owners"],
-    queryFn: () => usersApi.list({ role: "Owner", limit: 100 }),
+    queryFn: () => usersApi.list({ role: "staff", active: "true", limit: 100 }),
     enabled: isSuperAdmin,
   });
   const owners = ownerData?.users || [];
@@ -544,7 +544,7 @@ export default function ItemFormPage({ mode = "create" }) {
                     <SelectContent>
                       <SelectItem value="none">Unassigned (Super Admin only)</SelectItem>
                       {owners.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>{o.name} ({o.email})</SelectItem>
+                        <SelectItem key={o.id} value={o.id}>{o.name} ({o.email}){o.role === "SuperAdmin" ? " - Super Admin" : ""}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

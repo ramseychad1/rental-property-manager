@@ -8,7 +8,6 @@ import { vertical } from "@/config/vertical";
 import { navConfig } from "@/config/nav";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { motion } from "motion/react";
 
 export default function AppShell() {
   const { isSuperAdmin } = useAuth();
@@ -81,15 +80,10 @@ export default function AppShell() {
 
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMobileMenu={() => setMobileOpen(true)} />
-        <motion.main
-          data-testid="app-main"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="flex-1 p-5 md:p-8"
-        >
+        {/* CSS (not motion): a JS fade-in that starts at opacity 0 can get stuck there and leave the page blank. */}
+        <main data-testid="app-main" className="app-main-enter flex-1 p-5 md:p-8">
           <Outlet />
-        </motion.main>
+        </main>
       </div>
     </div>
   );

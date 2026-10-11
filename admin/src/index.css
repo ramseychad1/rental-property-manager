@@ -321,3 +321,15 @@
 .prose-editor em {
   font-style: italic;
 }
+
+/* Page fade-in. Starts from the normal (visible) state, so if the animation
+   never runs the page is still shown. */
+@keyframes app-main-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.app-main-enter {
+  animation: app-main-enter 0.25s ease-out;
+}

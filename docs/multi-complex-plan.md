@@ -86,6 +86,14 @@ Route changes:
 - Creating a SiteAdmin, a Site, or a domain stays SuperAdmin-only.
 - On public-site requests `attachUser` must require a membership in the resolved site. A session from complex A has no membership on B, so it is treated as signed out there (the cookie is host-only anyway; this is the server-side backstop).
 
+**Phase 3 status: BUILT locally 2026-10-11, not committed or deployed.** What exists:
+- `attachUser` computes each request's access context and puts `membership` and `siteId` on `req.user` (SuperAdmin: all complexes, narrowed by the complex's domain or an `X-Site-Id` header; everyone else: their complex). On a complex's own domain only members of that complex (plus SuperAdmin) are signed in; a session from another complex is treated as signed out. For members on the admin host, `req.site` switches to their complex, so site content reads/writes follow the user.
+- `lib/access.js`: `isSiteAdmin`, `reqSiteId`, view scopes (`propertyScope`, `bookingScope`) vs manage scopes (`propertyManageScope`, `bookingManageScope`), `canSeeManagedProperty`/`canManageProperty`. SiteAdmin sees every property and booking in the complex but can change only what they own (booking decisions stay with the owner).
+- `requireSiteAdmin`; users, site-content and Things To Do routes use it. A SiteAdmin manages only Owners/Guests of their own complex, can create only Owners, cannot change roles; accounts elsewhere return 404. Owner lookups for properties and invites must belong to the complex; invites only work inside the owner's complex; login/signup are per complex.
+- Migration `multi_complex_scoping`: `UserRole` gains `SiteAdmin`; `Property.siteId` and `ThingToDo.siteId` are now NOT NULL (with a safety-net backfill). `VerificationCode.siteId` stays nullable and is recorded but not enforced.
+- Tests: `npm test` runs `backend/tests/crossComplex.test.js` (11 tests, two throwaway complexes, local database only). A deliberate break of the site filters makes them fail, so they do catch regressions.
+- Deliberately not done here: unknown hosts still fall back to the default complex (strict 404 comes after custom domains), no multi-membership signup (an existing email still gets 409), the last-SuperAdmin guard and scope editor are Phase 5, and the admin panel UI does not yet know the SiteAdmin role.
+
 ## Phase 4 - Custom domains (do not skip)
 
 - Cookies are host-only, so each domain is its own session. Good for isolation; staff use the single admin console.

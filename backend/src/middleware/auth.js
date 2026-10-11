@@ -1,7 +1,7 @@
 import { COOKIE_NAME, verifyToken } from "../lib/jwt.js";
 import { prisma } from "../lib/prisma.js";
 import { fail } from "../lib/response.js";
-import { isStaff, isSuperAdmin } from "../lib/access.js";
+import { isStaff, isSuperAdmin, isSiteAdmin } from "../lib/access.js";
 
 const SEEN_THROTTLE_MS = 5 * 60 * 1000;
 
@@ -11,8 +11,8 @@ export async function attachUser(req, _res, next) {
 
   try {
     const payload = verifyToken(token);
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (user && user.isActive) {
+    const user = await prisma.user.findUnique({ where: { id: payload.sub }, include: { memberships: true } });
+    if (user && user.isActive && (await applyAccessContext(req, user))) {
       req.user = user;
       // Throttled so a busy page doesn't write on every request.
       if (!user.lastSeenAt || Date.now() - user.lastSeenAt.getTime() > SEEN_THROTTLE_MS) {
@@ -25,6 +25,45 @@ export async function attachUser(req, _res, next) {
   }
 
   next();
+}
+
+// Works out which complex this request acts on and the user's role there,
+// storing both on `user` (`membership`, `siteId`). Returns false when the
+// user has no standing here, in which case the request is treated as signed
+// out:
+//  - On a complex's own domain, only members of *that* complex (and
+//    SuperAdmin) are signed in.
+//  - On any other host (the admin panel), a member acts in their complex.
+//  - SuperAdmin acts on every complex (siteId null) unless a domain or the
+//    X-Site-Id header narrows it to one.
+async function applyAccessContext(req, user) {
+  const memberships = user.memberships ?? [];
+  const onComplexDomain = !!req.siteMatched;
+
+  if (user.role === "SuperAdmin") {
+    let siteId = onComplexDomain ? req.site.id : null;
+    const picked = req.get("x-site-id");
+    if (!onComplexDomain && picked) {
+      const site = await prisma.site.findUnique({ where: { id: picked } });
+      if (site) {
+        siteId = site.id;
+        req.site = site;
+      }
+    }
+    user.membership = null;
+    user.siteId = siteId;
+    return true;
+  }
+
+  const membership = onComplexDomain ? memberships.find((m) => m.siteId === req.site.id) : memberships[0];
+  if (!membership) return false;
+
+  user.membership = membership;
+  user.siteId = membership.siteId;
+  if (req.site?.id !== membership.siteId) {
+    req.site = await prisma.site.findUnique({ where: { id: membership.siteId } });
+  }
+  return true;
 }
 
 export function requireAuth(req, res, next) {
@@ -41,6 +80,13 @@ export function requireStaff(req, res, next) {
 export function requireSuperAdmin(req, res, next) {
   if (!req.user) return fail(res, "Please sign in to continue.", 401);
   if (!isSuperAdmin(req.user)) return fail(res, "Super admin access required.", 403);
+  next();
+}
+
+// Runs a complex: SiteAdmin of it, or SuperAdmin.
+export function requireSiteAdmin(req, res, next) {
+  if (!req.user) return fail(res, "Please sign in to continue.", 401);
+  if (!isSuperAdmin(req.user) && !isSiteAdmin(req.user)) return fail(res, "Site admin access required.", 403);
   next();
 }
 

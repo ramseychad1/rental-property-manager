@@ -13,10 +13,11 @@ import {
   propertyScope,
   findManagedProperty,
   visiblePropertyWhere,
+  reqSiteId,
+  isSiteAdmin,
   findViewableProperty,
 } from "../lib/access.js";
 import { assertTermsSumTo100 } from "../lib/paymentSchedule.js";
-import { getDefaultSite } from "../lib/membership.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -104,11 +105,16 @@ const ADMIN_CLIENT = "rental-property-manager-admin-panel";
 
 // Owners always own what they create. A SuperAdmin may assign any Owner or
 // SuperAdmin (or leave it unassigned).
-async function resolveOwnerId(user, requested) {
+// The chosen owner must belong to the property's complex (or be a SuperAdmin).
+async function resolveOwnerId(user, requested, siteId) {
   if (!isSuperAdmin(user)) return user.id;
   if (!requested) return null;
   const owner = await prisma.user.findFirst({
-    where: { id: requested, role: { in: ["Owner", "SuperAdmin"] }, isActive: true },
+    where: {
+      id: requested,
+      isActive: true,
+      OR: [{ role: "SuperAdmin" }, { memberships: { some: { siteId, role: { in: ["Owner", "SiteAdmin"] } } } }],
+    },
   });
   if (!owner) throw new ApiError("Selected owner not found.", 400);
   return owner.id;
@@ -125,7 +131,7 @@ export async function listProperties(req, res, next) {
 
     const where = {};
     if (!managing) {
-      Object.assign(where, visiblePropertyWhere(req.user));
+      Object.assign(where, visiblePropertyWhere(req.user, reqSiteId(req)));
     } else {
       Object.assign(where, propertyScope(req.user));
       if (status && status !== "all") where.status = status;
@@ -135,11 +141,11 @@ export async function listProperties(req, res, next) {
       where.title = { contains: String(search), mode: "insensitive" };
     }
 
-    // Super Admins see who manages each property in the admin list.
+    // Super Admins and Site Admins see who manages each property in the admin list.
     const properties = await prisma.property.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      ...(managing && isSuperAdmin(req.user) && { include: { owner: { select: { id: true, name: true, email: true } } } }),
+      ...(managing && (isSuperAdmin(req.user) || isSiteAdmin(req.user)) && { include: { owner: { select: { id: true, name: true, email: true } } } }),
     });
 
     return ok(res, properties.map(serializeProperty));
@@ -152,7 +158,7 @@ export async function getProperty(req, res, next) {
   try {
     // Inactive properties, and private ones the viewer has no grant for, look
     // exactly like nonexistent ids.
-    const property = await findViewableProperty(req.user, req.params.id);
+    const property = await findViewableProperty(req.user, req.params.id, reqSiteId(req));
 
     return ok(res, serializeProperty(property));
   } catch (err) {
@@ -164,7 +170,8 @@ export async function createProperty(req, res, next) {
   try {
     const body = propertySchema.parse(unflatten(req.body));
     const amenities = toArray(req.body.amenities);
-    const ownerId = await resolveOwnerId(req.user, body.ownerId);
+    const siteId = reqSiteId(req) ?? req.site.id;
+    const ownerId = await resolveOwnerId(req.user, body.ownerId, siteId);
 
     // Pre-fill the rental agreement by copying the owner's most recently
     // updated property that has one (one-time copy, not a shared record).
@@ -185,10 +192,9 @@ export async function createProperty(req, res, next) {
     const thumbnail = thumbnailFile ? await saveFile(thumbnailFile) : null;
     const gallery = await Promise.all(galleryFiles.map((f) => saveFile(f)));
 
-    const site = await getDefaultSite();
     const property = await prisma.property.create({
       data: {
-        siteId: site.id,
+        siteId,
         title: body.title,
         description: body.description,
         minNights: body.minNights,
@@ -255,7 +261,7 @@ export async function updateProperty(req, res, next) {
     if (flat.isPrivate !== undefined) data.isPrivate = body.isPrivate;
     if (req.body.amenities !== undefined) data.amenities = toArray(req.body.amenities);
     if (isSuperAdmin(req.user) && body.ownerId !== undefined) {
-      data.ownerId = await resolveOwnerId(req.user, body.ownerId);
+      data.ownerId = await resolveOwnerId(req.user, body.ownerId, existing.siteId);
     }
     if (flat.depositEnabled !== undefined) data.depositEnabled = body.depositEnabled;
     if (flat.depositAmount !== undefined) data.depositAmount = body.depositAmount;
@@ -329,7 +335,7 @@ export async function removeProperty(req, res, next) {
 
 export async function bookedDates(req, res, next) {
   try {
-    await findViewableProperty(req.user, req.params.id);
+    await findViewableProperty(req.user, req.params.id, reqSiteId(req));
     const bookings = await prisma.booking.findMany({
       where: { propertyId: req.params.id, bookingStatus: { in: HELD_STATUSES } },
       select: { checkIn: true, checkOut: true },
@@ -384,7 +390,7 @@ export async function bookedRanges(req, res, next) {
 export async function pricingPreview(req, res, next) {
   try {
     const { from, to } = req.query;
-    const property = await findViewableProperty(req.user, req.params.id);
+    const property = await findViewableProperty(req.user, req.params.id, reqSiteId(req));
 
     const seasons = await prisma.season.findMany({ where: { propertyId: req.params.id } });
 

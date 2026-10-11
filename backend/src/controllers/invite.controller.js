@@ -77,7 +77,14 @@ export async function createInvite(req, res, next) {
     let owner = req.user;
     if (isSuperAdmin(req.user) && body.ownerId && body.ownerId !== req.user.id) {
       owner = await prisma.user.findFirst({
-        where: { id: body.ownerId, role: { in: ["Owner", "SuperAdmin"] }, isActive: true },
+        where: {
+          id: body.ownerId,
+          isActive: true,
+          // Must belong to the complex the Super Admin is working in (when narrowed to one).
+          ...(req.user.siteId
+            ? { OR: [{ role: "SuperAdmin" }, { memberships: { some: { siteId: req.user.siteId } } }] }
+            : { role: { in: ["Owner", "SiteAdmin", "SuperAdmin"] } }),
+        },
       });
       if (!owner) throw new ApiError("Selected owner not found.", 400);
     }
@@ -179,9 +186,15 @@ export async function claimInvite(req, res, next) {
 
     const invite = await prisma.ownerInvite.findUnique({
       where: { tokenHash: hashToken(token) },
-      include: { owner: { select: { id: true, name: true, isActive: true } } },
+      include: { owner: { select: { id: true, name: true, isActive: true, role: true, memberships: true } } },
     });
-    if (!invite || invite.revokedAt || invite.expiresAt < new Date() || !invite.owner.isActive) {
+    // An invite only works inside the owner's own complex.
+    const sameComplex =
+      !invite ||
+      isSuperAdmin(req.user) ||
+      invite.owner.role === "SuperAdmin" ||
+      invite.owner.memberships.some((m) => m.siteId === req.user.siteId);
+    if (!invite || !sameComplex || invite.revokedAt || invite.expiresAt < new Date() || !invite.owner.isActive) {
       throw new ApiError("This invitation is no longer valid. Ask the owner to send a new one.", 410);
     }
     if (invite.ownerId === req.user.id) throw new ApiError("You're signed in as the owner who sent this invitation.", 400, { code: "OWN_INVITE" });

@@ -6,7 +6,15 @@ import { serializeBooking } from "../lib/serialize.js";
 import { dateOnly } from "../lib/serialize.js";
 import { notifyBookingCreated, notifyBookingEvent } from "../lib/notifications.js";
 import { seasonForKey } from "../lib/seasonRange.js";
-import { isStaff, isSuperAdmin, propertyScope, bookingScope, findViewableProperty } from "../lib/access.js";
+import {
+  propertyScope,
+  bookingScope,
+  bookingManageScope,
+  canSeeManagedProperty,
+  canManageProperty,
+  findViewableProperty,
+  reqSiteId,
+} from "../lib/access.js";
 import { usPhone, usState, usZip, street, city } from "../lib/usContact.js";
 import { buildInstallments } from "../lib/paymentSchedule.js";
 import { generateBookingDocument, loadBookingDocument } from "../lib/bookingDocument.js";
@@ -150,7 +158,7 @@ export async function createBooking(req, res, next) {
     const propertyId = req.params.propertyId;
 
     // Guests can only book what they can see (private properties need a grant).
-    await findViewableProperty(req.user, propertyId);
+    await findViewableProperty(req.user, propertyId, reqSiteId(req));
 
     const checkIn = new Date(body.checkIn);
     const checkOut = new Date(body.checkOut);
@@ -279,7 +287,7 @@ export async function getBooking(req, res, next) {
     if (!booking) throw new ApiError("Booking not found.", 404);
 
     const isGuest = booking.userId && booking.userId === req.user.id;
-    const managesProperty = isSuperAdmin(req.user) || (isStaff(req.user) && booking.property.ownerId === req.user.id);
+    const managesProperty = canSeeManagedProperty(req.user, booking.property);
     if (!isGuest && !managesProperty) {
       throw new ApiError("Booking not found.", 404);
     }
@@ -298,15 +306,18 @@ export async function getBookingDocument(req, res, next) {
     if (!booking) throw new ApiError("Booking not found.", 404);
 
     const isGuest = booking.userId && booking.userId === req.user.id;
-    const managesProperty = isSuperAdmin(req.user) || (isStaff(req.user) && booking.property.ownerId === req.user.id);
+    const managesProperty = canSeeManagedProperty(req.user, booking.property);
     if (!isGuest && !managesProperty) throw new ApiError("Booking not found.", 404);
+    if (req.method === "POST" && !canManageProperty(req.user, booking.property)) {
+      throw new ApiError("Booking not found.", 404);
+    }
     if (!["accepted", "booked"].includes(booking.bookingStatus)) {
       throw new ApiError("A document is only available once the booking is accepted.", 409);
     }
 
     // POST regenerates from current data (staff only); GET serves the stored copy.
     const pdf =
-      req.method === "POST" && managesProperty
+      req.method === "POST"
         ? await generateBookingDocument(booking.id)
         : await loadBookingDocument(booking);
 
@@ -323,7 +334,7 @@ export async function getBookingDocument(req, res, next) {
 export async function setSignedCopy(req, res, next) {
   try {
     const { received } = z.object({ received: z.boolean() }).parse(req.body);
-    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
+    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingManageScope(req.user) } });
     if (!existing) throw new ApiError("Booking not found.", 404);
 
     const booking = await prisma.booking.update({
@@ -339,7 +350,7 @@ export async function setSignedCopy(req, res, next) {
 
 async function transition(req, res, next, data, message, event) {
   try {
-    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingScope(req.user) } });
+    const existing = await prisma.booking.findFirst({ where: { id: req.params.id, ...bookingManageScope(req.user) } });
     if (!existing) throw new ApiError("Booking not found.", 404);
 
     const booking = await prisma.booking.update({
@@ -359,7 +370,7 @@ async function transition(req, res, next, data, message, event) {
 export async function acceptBooking(req, res, next) {
   try {
     const existing = await prisma.booking.findFirst({
-      where: { id: req.params.id, ...bookingScope(req.user) },
+      where: { id: req.params.id, ...bookingManageScope(req.user) },
       include: { property: true },
     });
     if (!existing) throw new ApiError("Booking not found.", 404);
@@ -420,7 +431,7 @@ export async function markInstallmentPaid(req, res, next) {
     const { paid } = z.object({ paid: z.boolean() }).parse(req.body);
 
     const booking = await prisma.booking.findFirst({
-      where: { id: req.params.id, ...bookingScope(req.user) },
+      where: { id: req.params.id, ...bookingManageScope(req.user) },
       include: { installments: true },
     });
     if (!booking) throw new ApiError("Booking not found.", 404);
@@ -464,7 +475,7 @@ export async function updateBookingAddOns(req, res, next) {
     const { addOnIds } = z.object({ addOnIds: z.array(z.string().trim().min(1)) }).parse(req.body);
 
     const booking = await prisma.booking.findFirst({
-      where: { id: req.params.id, ...bookingScope(req.user) },
+      where: { id: req.params.id, ...bookingManageScope(req.user) },
       include: { installments: true },
     });
     if (!booking) throw new ApiError("Booking not found.", 404);
@@ -531,7 +542,7 @@ export async function setPaymentStatus(req, res, next) {
 
   try {
     const existing = await prisma.booking.findFirst({
-      where: { id: req.params.id, ...bookingScope(req.user) },
+      where: { id: req.params.id, ...bookingManageScope(req.user) },
       include: { _count: { select: { installments: true } } },
     });
     if (!existing) throw new ApiError("Booking not found.", 404);
@@ -628,7 +639,9 @@ export async function analytics(req, res, next) {
       prisma.property.count({ where: propScope }),
       prisma.property.count({ where: { ...propScope, status: "active" } }),
       // Registered guests only - staff accounts (owners, super admins) aren't customers.
-      prisma.user.count({ where: { role: "Guest" } }),
+      prisma.user.count({
+        where: { role: "Guest", ...(req.user.siteId ? { memberships: { some: { siteId: req.user.siteId } } } : {}) },
+      }),
       prisma.booking.findMany({
         where: { ...bkScope, createdAt: { gte: start, lt: end } },
         include: { property: true, user: true },

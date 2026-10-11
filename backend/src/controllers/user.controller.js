@@ -92,6 +92,9 @@ export async function listAllUsers(req, res, next) {
     const { search, role } = req.query;
 
     const where = {};
+    // A Site Admin sees only their own complex's members; a Super Admin sees
+    // everyone, or one complex when narrowed.
+    if (req.user.siteId) where.memberships = { some: { siteId: req.user.siteId } };
     if (search) {
       where.OR = [
         { name: { contains: String(search), mode: "insensitive" } },
@@ -100,7 +103,7 @@ export async function listAllUsers(req, res, next) {
     }
     if (role === "staff") {
       // Anyone who can own properties / send invites.
-      where.role = { in: ["Owner", "SuperAdmin"] };
+      where.role = { in: ["Owner", "SiteAdmin", "SuperAdmin"] };
     } else if (role && role !== "all") {
       // The admin UI labels Guest accounts "User".
       where.role = role === "User" ? "Guest" : role;
@@ -145,7 +148,7 @@ export async function userBookings(req, res, next) {
     }
 
     const bookings = await prisma.booking.findMany({
-      where: { userId },
+      where: { userId, ...(req.user.siteId ? { property: { siteId: req.user.siteId } } : {}) },
       include: { property: true, user: true },
       orderBy: { createdAt: "desc" },
     });
@@ -161,7 +164,22 @@ export async function userBookings(req, res, next) {
 
 /* --------------------------- SuperAdmin user management -------------------------- */
 
-const STAFF_ROLES = ["Owner", "SuperAdmin"];
+const STAFF_ROLES = ["Owner", "SiteAdmin", "SuperAdmin"];
+
+// Which accounts the signed-in admin may manage. SuperAdmin: anyone. SiteAdmin:
+// Owners and Guests who belong to their own complex - accounts elsewhere look
+// nonexistent (404), and peers or higher are refused.
+async function loadManageableUser(actor, userId, include) {
+  const target = await prisma.user.findUnique({ where: { id: userId }, include: { memberships: true, ...include } });
+  if (!target) throw new ApiError("User not found.", 404);
+  if (isSuperAdmin(actor)) return target;
+  const membership = target.memberships.find((m) => m.siteId === actor.siteId);
+  if (!membership) throw new ApiError("User not found.", 404);
+  if (target.id !== actor.id && !["Owner", "Guest"].includes(membership.role)) {
+    throw new ApiError("Only a Super Admin can manage that account.", 403);
+  }
+  return target;
+}
 
 // Credentials shown once in the admin UI for the SuperAdmin to pass along by
 // hand - no email provider is wired up. `loginUrl` is the admin console the
@@ -178,8 +196,12 @@ export async function createUser(req, res, next) {
         name: z.string().trim().min(1, "Name is required"),
         email: z.string().trim().email("Enter a valid email"),
         role: z.enum(STAFF_ROLES).default("Owner"),
+        siteId: z.string().optional(),
       })
       .parse(req.body);
+    if (!isSuperAdmin(req.user) && body.role !== "Owner") {
+      throw new ApiError("Site admins can only create Owner accounts.", 403);
+    }
 
     const email = body.email.toLowerCase();
     if (await prisma.user.findUnique({ where: { email } })) {
@@ -187,7 +209,12 @@ export async function createUser(req, res, next) {
     }
 
     const tempPassword = generateTempPassword();
-    const site = await getDefaultSite();
+    const site = isSuperAdmin(req.user)
+      ? body.siteId
+        ? await prisma.site.findUnique({ where: { id: body.siteId } })
+        : (req.user.siteId ? req.site : await getDefaultSite())
+      : req.site;
+    if (!site) throw new ApiError("Complex not found.", 400);
     const user = await prisma.user.create({
       data: {
         name: body.name,
@@ -216,8 +243,8 @@ export async function updateUser(req, res, next) {
       })
       .parse(req.body);
 
-    const target = await prisma.user.findUnique({ where: { id: req.params.userId } });
-    if (!target) throw new ApiError("User not found.", 404);
+    const target = await loadManageableUser(req.user, req.params.userId);
+    if (body.role && !isSuperAdmin(req.user)) throw new ApiError("Only a Super Admin can change roles.", 403);
 
     if (target.id === req.user.id && (body.isActive === false || (body.role && body.role !== target.role))) {
       throw new ApiError("You can't deactivate or change the role of your own account.", 400);
@@ -239,8 +266,7 @@ export async function updateUser(req, res, next) {
 
 export async function resetUserPassword(req, res, next) {
   try {
-    const target = await prisma.user.findUnique({ where: { id: req.params.userId } });
-    if (!target) throw new ApiError("User not found.", 404);
+    const target = await loadManageableUser(req.user, req.params.userId);
 
     const tempPassword = generateTempPassword();
     const user = await prisma.user.update({
@@ -264,8 +290,7 @@ export async function emailCredentials(req, res, next) {
       .object({ tempPassword: z.string().min(1), reset: z.boolean().optional() })
       .parse(req.body);
 
-    const target = await prisma.user.findUnique({ where: { id: req.params.userId } });
-    if (!target) throw new ApiError("User not found.", 404);
+    const target = await loadManageableUser(req.user, req.params.userId);
     if (!target.mustChangePassword || !(await bcrypt.compare(tempPassword, target.passwordHash))) {
       throw new ApiError("That temporary password is no longer current. Reset the password to get a new one.", 400);
     }
@@ -294,11 +319,7 @@ export async function emailCredentials(req, res, next) {
 // - a connected Gmail is disconnected at Google too, then its row cascades away.
 export async function deleteUser(req, res, next) {
   try {
-    const target = await prisma.user.findUnique({
-      where: { id: req.params.userId },
-      include: { emailConnection: true },
-    });
-    if (!target) throw new ApiError("User not found.", 404);
+    const target = await loadManageableUser(req.user, req.params.userId, { emailConnection: true });
     if (target.id === req.user.id) throw new ApiError("You can't delete your own account.", 400);
 
     if (target.role === "SuperAdmin") {

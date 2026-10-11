@@ -5,14 +5,14 @@ import {
   resetSection,
   uploadImage,
 } from "../controllers/siteContent.controller.js";
-import { requireSuperAdmin } from "../middleware/auth.js";
+import { requireSiteAdmin } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
 
 const router = Router();
 
 router.get("/", getSiteContent);
-router.post("/upload", requireSuperAdmin, upload.single("image"), uploadImage);
-router.put("/:section", requireSuperAdmin, saveSection);
-router.delete("/:section", requireSuperAdmin, resetSection);
+router.post("/upload", requireSiteAdmin, upload.single("image"), uploadImage);
+router.put("/:section", requireSiteAdmin, saveSection);
+router.delete("/:section", requireSiteAdmin, resetSection);
 
 export default router;

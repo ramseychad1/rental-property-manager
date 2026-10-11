@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   Guest
   Owner
+  SiteAdmin
   SuperAdmin
 }
 
@@ -154,9 +155,8 @@ model Property {
   // Owner who manages this property. Null = unassigned (SuperAdmin-only).
   ownerId String?
   owner   User?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  // Nullable until multi-complex scoping ships; then it becomes required.
-  siteId  String?
-  site    Site?   @relation(fields: [siteId], references: [id], onDelete: Restrict)
+  siteId  String
+  site    Site    @relation(fields: [siteId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -374,9 +374,8 @@ model ThingToDo {
   status          String   @default("active") // "active" | "inactive"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  // Nullable until multi-complex scoping ships; then it becomes required.
-  siteId          String?
-  site            Site?    @relation(fields: [siteId], references: [id], onDelete: Restrict)
+  siteId          String
+  site            Site     @relation(fields: [siteId], references: [id], onDelete: Restrict)
 
   @@index([category])
   @@index([siteId])

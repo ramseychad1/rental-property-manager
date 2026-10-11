@@ -5,7 +5,7 @@ import { ok, fail, ApiError } from "../lib/response.js";
 import { serializeUser } from "../lib/serialize.js";
 import { signToken, COOKIE_NAME, cookieOptions } from "../lib/jwt.js";
 import { issueCode, verifyCode } from "../lib/otp.js";
-import { getDefaultSite, membershipCreate } from "../lib/membership.js";
+import { membershipCreate } from "../lib/membership.js";
 
 const emailSchema = z.string().trim().email();
 
@@ -34,7 +34,7 @@ export async function sendSignupOtp(req, res, next) {
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (existing) throw new ApiError("An account with this email already exists.", 409);
 
-    await issueCode(email, "SIGNUP");
+    await issueCode(email, "SIGNUP", req.site?.id);
     return ok(res, null, "OTP sent successfully");
   } catch (err) {
     next(err);
@@ -52,7 +52,7 @@ export async function register(req, res, next) {
     if (!valid) throw new ApiError("Invalid or expired OTP.", 400);
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const site = await getDefaultSite();
+    const site = req.site;
     const user = await prisma.user.create({
       data: {
         name,
@@ -83,12 +83,21 @@ export async function login(req, res, next) {
   try {
     const { email, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { memberships: true },
+    });
     if (!user) throw new ApiError("Invalid email or password.", 401);
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new ApiError("Invalid email or password.", 401);
     if (!user.isActive) throw new ApiError("This account has been deactivated.", 403);
+
+    // On a complex's own domain only its members can sign in (same message as
+    // a wrong password so accounts elsewhere aren't revealed).
+    if (req.siteMatched && user.role !== "SuperAdmin" && !user.memberships.some((m) => m.siteId === req.site.id)) {
+      throw new ApiError("Invalid email or password.", 401);
+    }
 
     const now = new Date();
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, lastSeenAt: now } });

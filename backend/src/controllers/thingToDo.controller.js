@@ -2,10 +2,9 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeThingToDo } from "../lib/serialize.js";
-import { isSuperAdmin } from "../lib/access.js";
+import { isSuperAdmin, isSiteAdmin, reqSiteId } from "../lib/access.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { unflatten } from "../middleware/upload.js";
-import { getDefaultSite } from "../lib/membership.js";
 
 // Must match the X-Client header set in admin/src/lib/api.js.
 const ADMIN_CLIENT = "rental-property-manager-admin-panel";
@@ -35,10 +34,13 @@ const thingSchema = z.object({
 // header) gets every status and can filter/search.
 export async function listThingsToDo(req, res, next) {
   try {
-    const managing = isSuperAdmin(req.user) && req.get("X-Client") === ADMIN_CLIENT;
+    const managing = (isSuperAdmin(req.user) || isSiteAdmin(req.user)) && req.get("X-Client") === ADMIN_CLIENT;
     const { search, status, category } = req.query;
 
-    const where = {};
+    // Scoped to the complex the request is for (all complexes only for a
+    // Super Admin who hasn't picked one).
+    const siteId = reqSiteId(req);
+    const where = siteId ? { siteId } : {};
     if (!managing) where.status = "active";
     else if (status && status !== "all") where.status = status;
     if (category && category !== "all") where.category = String(category);
@@ -63,7 +65,8 @@ export async function listThingsToDo(req, res, next) {
 export async function getThingToDo(req, res, next) {
   try {
     const item = await prisma.thingToDo.findUnique({ where: { id: req.params.id } });
-    if (!item || (item.status !== "active" && !isSuperAdmin(req.user))) {
+    const siteId = reqSiteId(req);
+    if (!item || (siteId && item.siteId !== siteId) || (item.status !== "active" && !isSuperAdmin(req.user) && !isSiteAdmin(req.user))) {
       throw new ApiError("Not found.", 404);
     }
     return ok(res, serializeThingToDo(item));
@@ -77,10 +80,9 @@ export async function createThingToDo(req, res, next) {
     const body = thingSchema.parse(unflatten(req.body));
     const image = req.file ? await saveFile(req.file) : null;
 
-    const site = await getDefaultSite();
     const item = await prisma.thingToDo.create({
       data: {
-        siteId: site.id,
+        siteId: reqSiteId(req) ?? req.site.id,
         name: body.name,
         description: body.description,
         category: body.category,
@@ -97,11 +99,18 @@ export async function createThingToDo(req, res, next) {
   }
 }
 
+// Loads an item the signed-in admin may change: it must be in their complex.
+async function findInScope(req) {
+  const existing = await prisma.thingToDo.findUnique({ where: { id: req.params.id } });
+  const siteId = reqSiteId(req);
+  if (!existing || (siteId && existing.siteId !== siteId)) throw new ApiError("Not found.", 404);
+  return existing;
+}
+
 // True partial update: only fields present in the request change.
 export async function updateThingToDo(req, res, next) {
   try {
-    const existing = await prisma.thingToDo.findUnique({ where: { id: req.params.id } });
-    if (!existing) throw new ApiError("Not found.", 404);
+    const existing = await findInScope(req);
 
     const body = thingSchema.partial().parse(unflatten(req.body));
     const data = {};
@@ -128,8 +137,7 @@ export async function updateThingToDo(req, res, next) {
 
 export async function removeThingToDo(req, res, next) {
   try {
-    const existing = await prisma.thingToDo.findUnique({ where: { id: req.params.id } });
-    if (!existing) throw new ApiError("Not found.", 404);
+    const existing = await findInScope(req);
     await prisma.thingToDo.delete({ where: { id: existing.id } });
     if (existing.imageUrl) await deleteFile(existing.imageUrl);
     return ok(res, null, "Deleted");

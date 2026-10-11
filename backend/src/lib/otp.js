@@ -5,12 +5,12 @@ import { notifyOtp } from "./notifications.js";
 
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-export async function issueCode(email, purpose) {
+export async function issueCode(email, purpose, siteId) {
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
   await prisma.verificationCode.create({
-    data: { email: email.toLowerCase(), code, purpose, expiresAt },
+    data: { email: email.toLowerCase(), code, purpose, expiresAt, siteId: siteId ?? null },
   });
 
   // Sent through the system Gmail sender. With no sender connected the mailer

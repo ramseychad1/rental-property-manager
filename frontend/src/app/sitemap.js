@@ -9,7 +9,6 @@ export default async function sitemap() {
     "/properties",
     "/things-to-do",
     "/services",
-    "/rate",
     "/contact",
     "/privacy-policy",
     "/refund-policy",

@@ -161,3 +161,22 @@ test("preview mode shows a complex by slug on shared hosts only", async () => {
   invalidateSiteCache();
   assert.equal((await cur({ host: "localhost", slug: "xd-preview" })).preview, false);
 });
+
+test("admins get a preview link (needs a preview host) and a live link (needs a domain)", async () => {
+  const site = await prisma.site.create({ data: { slug: "xd-links", name: "Links Complex" } });
+  invalidateSiteCache();
+  const links = async () => (await api("GET", "/api/site", { as: "super" })).body.data.find((s) => s._id === site.id);
+
+  assert.equal((await links()).previewUrl, null);
+  assert.equal((await links()).siteUrl, null);
+
+  process.env.SITE_PREVIEW_HOSTS = "share.xd-test.com, other.xd-test.com";
+  try {
+    assert.equal((await links()).previewUrl, "https://share.xd-test.com/c/xd-links");
+    await api("POST", `/api/site/${site.id}/domains`, { as: "super", body: { hostname: "live.xd-test.com" } });
+    assert.equal((await links()).siteUrl, "https://live.xd-test.com");
+    assert.equal((await api("GET", "/api/site/current", { host: "live.xd-test.com" })).body.data.previewUrl, "https://share.xd-test.com/c/xd-links");
+  } finally {
+    delete process.env.SITE_PREVIEW_HOSTS;
+  }
+});

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Check, CheckCircle2, Globe, Loader2, Pencil, Plus, Star, Trash2, X, XCircle } from "lucide-react";
+import { Building2, Check, CheckCircle2, ExternalLink, Globe, Loader2, Pencil, Plus, Star, Trash2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
@@ -175,6 +175,18 @@ function SiteCard({ site, onChanged }) {
             {!site.isActive && <Badge variant="outline">Inactive</Badge>}
           </div>
           <p className="text-xs text-muted-foreground font-mono">{site.slug}</p>
+          <p className="text-sm flex flex-wrap gap-x-3">
+            {site.previewUrl && (
+              <a href={site.previewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                Preview site <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            {site.siteUrl && (
+              <a href={site.siteUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                Live site <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </p>
         </div>
         <div className="ml-auto flex items-center gap-4 text-sm text-muted-foreground">
           <span>{site.counts.properties} properties</span>

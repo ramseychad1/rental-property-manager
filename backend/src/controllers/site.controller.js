@@ -4,6 +4,16 @@ import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { invalidateSiteCache, normalizeHost, originFor, primaryOriginFor } from "../lib/siteResolver.js";
 
+// Where an admin can look at a complex's public site: its own primary domain
+// (once it has one and DNS is live), and a preview link on the shared preview
+// host, which works before any domain exists. Either may be null.
+async function viewLinks(site) {
+  const siteUrl = await primaryOriginFor(site.id);
+  const previewHost = (process.env.SITE_PREVIEW_HOSTS || "").split(",").map((h) => normalizeHost(h)).filter(Boolean)[0];
+  const previewUrl = previewHost ? `${originFor(previewHost)}/c/${site.slug}` : null;
+  return { siteUrl, previewUrl };
+}
+
 // Public: the complex this request is for, so the website can build canonical
 // URLs, the sitemap and robots.txt on the right domain.
 export async function currentSite(req, res, next) {
@@ -14,6 +24,7 @@ export async function currentSite(req, res, next) {
       origin: (await primaryOriginFor(req.site.id)) ?? null,
       matched: !!req.siteMatched,
       preview: !!req.sitePreview,
+      ...(await viewLinks(req.site)),
     });
   } catch (err) {
     next(err);
@@ -45,7 +56,9 @@ async function listShape() {
       _count: { select: { properties: true, memberships: true, thingsToDo: true } },
     },
   });
-  return sites.map((s) => ({
+  const links = await Promise.all(sites.map(viewLinks));
+  return sites.map((s, i) => ({
+    ...links[i],
     _id: s.id,
     slug: s.slug,
     name: s.name,

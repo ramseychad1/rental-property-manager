@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Loader2, Check, Save, X } from "lucide-react";
+import { ArrowLeft, Loader2, Check, Save, X, CircleHelp } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import ImageDropzone from "@/components/forms/ImageDropzone";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PaymentScheduleFields, { newTerm } from "@/components/forms/PaymentScheduleFields";
 import AddOnsFields from "@/components/forms/AddOnsFields";
 import {
@@ -514,7 +515,33 @@ export default function ItemFormPage({ mode = "create" }) {
               </div>
 
               <div className="md:col-span-2 space-y-2">
-                <Label>Url</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Url</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="How to get the map link"
+                        data-testid="map-url-help"
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <CircleHelp className="w-4 h-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-80 text-sm space-y-2">
+                      <p className="font-medium">Get the exact pin from Google Maps</p>
+                      <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+                        <li>Open Google Maps (maps.google.com) and search for the property, or click its exact spot on the map.</li>
+                        <li>Check the pin is on the right building.</li>
+                        <li>Click <b className="text-foreground">Share</b>, then <b className="text-foreground">Copy link</b>. It looks like <code className="text-xs">https://maps.app.goo.gl/…</code></li>
+                        <li>Paste that link here.</li>
+                      </ol>
+                      <p className="text-xs text-muted-foreground">
+                        Don't paste just maps.google.com; it has no location. With no link, the map is found by searching the address, city, zip and country, which can pick the wrong place if the address isn't exact.
+                      </p>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <Input data-testid="form-url" {...register("location.url")} />
                 {errors.location?.url && (
                   <p className="text-xs text-destructive">{errors.location.url.message}</p>

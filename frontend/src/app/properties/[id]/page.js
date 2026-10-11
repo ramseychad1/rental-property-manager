@@ -54,10 +54,11 @@ export default async function PropertyDetailPage({ params }) {
     return <PropertyDetailClient propertyId={id} initialProperty={null} initialSeasons={[]} />;
   }
 
-  const mapEmbedUrl = await resolveEmbedUrl(
-    property.location?.url,
-    property.location?.address,
-  );
+  // Search with the whole address: a bare street ("123 South Ocean Blvd") matches
+  // the same street name in other states.
+  const { address, city, zipCode, country } = property.location ?? {};
+  const fullAddress = [address, city, zipCode, country].filter(Boolean).join(", ");
+  const mapEmbedUrl = await resolveEmbedUrl(property.location?.url, fullAddress);
 
   return (
     <PropertyDetailClient

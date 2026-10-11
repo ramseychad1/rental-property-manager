@@ -10,6 +10,7 @@ import siteContentRoutes from "./siteContent.routes.js";
 import emailRoutes from "./email.routes.js";
 import thingToDoRoutes from "./thingToDo.routes.js";
 import inviteRoutes from "./invite.routes.js";
+import siteRoutes from "./site.routes.js";
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use("/site-content", siteContentRoutes);
 router.use("/email", emailRoutes);
 router.use("/thingtodo", thingToDoRoutes);
 router.use("/invite", inviteRoutes);
+router.use("/site", siteRoutes);
 
 export default router;

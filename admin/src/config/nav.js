@@ -6,6 +6,7 @@ import {
   Settings,
   MapPinned,
   UserCheck,
+  Building2,
   LayoutTemplate,
 } from "lucide-react";
 import { vertical } from "@/config/vertical";
@@ -46,6 +47,13 @@ export const navConfig = [
       { label: "Page content", to: "/site-content", icon: LayoutTemplate, testid: "nav-site-content-pages" },
       { label: "Things To Do", to: "/things-to-do", icon: MapPinned, testid: "nav-things-to-do" },
     ],
+  },
+  {
+    label: "Complexes",
+    superAdminOnly: true,
+    to: "/complexes",
+    icon: Building2,
+    testid: "nav-complexes",
   },
   {
     label: "Users",

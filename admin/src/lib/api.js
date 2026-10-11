@@ -367,3 +367,35 @@ export const siteContentApi = {
     return data?.data?.url;
   },
 };
+
+// Complexes and their custom domains (SuperAdmin only).
+export const sitesApi = {
+  list: async () => {
+    const { data } = await http.get("/site");
+    return data?.data || [];
+  },
+  create: async (body) => {
+    const { data } = await http.post("/site", body);
+    return data?.data;
+  },
+  update: async (id, body) => {
+    const { data } = await http.patch(`/site/${id}`, body);
+    return data?.data;
+  },
+  addDomain: async (id, body) => {
+    const { data } = await http.post(`/site/${id}/domains`, body);
+    return data?.data;
+  },
+  makePrimary: async (id, domainId) => {
+    const { data } = await http.patch(`/site/${id}/domains/${domainId}/primary`);
+    return data?.data;
+  },
+  removeDomain: async (id, domainId) => {
+    const { data } = await http.delete(`/site/${id}/domains/${domainId}`);
+    return data?.data;
+  },
+  checkDomain: async (id, domainId) => {
+    const { data } = await http.post(`/site/${id}/domains/${domainId}/check`);
+    return data?.data;
+  },
+};

@@ -19,6 +19,7 @@ const ItemFormPage = lazy(() => import("@/pages/items/ItemForm"));
 const ItemDetailPage = lazy(() => import("@/pages/items/ItemDetail"));
 const BookingListPage = lazy(() => import("@/pages/bookings/BookingList"));
 const UserListPage = lazy(() => import("@/pages/users/UserList"));
+const SiteListPage = lazy(() => import("@/pages/sites/SiteList"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
 const SiteContentPage = lazy(() => import("@/pages/siteContent/SiteContent"));
 const TrustedRentersPage = lazy(() => import("@/pages/trustedRenters/TrustedRenters"));
@@ -70,6 +71,7 @@ export default function App() {
                     <Route path="bookings" element={<BookingListPage />} />
                     <Route path="pricing" element={<Navigate to={`/${vertical.item.slug}`} replace />} />
                     <Route path="users" element={<SuperAdminRoute><UserListPage /></SuperAdminRoute>} />
+                    <Route path="complexes" element={<SuperAdminRoute><SiteListPage /></SuperAdminRoute>} />
                     <Route path="site-content" element={<SuperAdminRoute><SiteContentPage /></SuperAdminRoute>} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>

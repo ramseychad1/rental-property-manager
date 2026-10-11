@@ -45,8 +45,8 @@ import CredentialsDialog from "./CredentialsDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
 
-const STAFF = ["SuperAdmin", "Owner"];
-const ROLE_LABEL = { SuperAdmin: "Super Admin", Owner: "Owner", Guest: "Guest" };
+const STAFF = ["SuperAdmin", "SiteAdmin", "Owner"];
+const ROLE_LABEL = { SuperAdmin: "Super Admin", SiteAdmin: "Site Admin", Owner: "Owner", Guest: "Guest" };
 
 const LIMIT = 10;
 
@@ -170,6 +170,7 @@ export default function UserListPage() {
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
             <SelectItem value="SuperAdmin">Super Admin</SelectItem>
+            <SelectItem value="SiteAdmin">Site Admin</SelectItem>
             <SelectItem value="Owner">Owner</SelectItem>
             <SelectItem value="User">Guest</SelectItem>
           </SelectContent>

@@ -104,6 +104,16 @@ Route changes:
 - Railway: each custom domain is attached to the **frontend** service (CNAME + automatic TLS). Confirm the plan's custom-domain limit per service before promising unlimited complexes.
 - SuperAdmin UI: Complexes page with name, SiteAdmin, domains (add, set primary, remove), active flag. Show DNS instructions and a "check domain" button using Railway's domain status.
 
+**Phase 4 status: BUILT locally 2026-10-11, not committed or deployed.** What exists:
+- CORS also allows every `SiteDomain` origin (from the cached table), so a new domain needs no env edit or redeploy; `CLIENT_URLS` still works.
+- `STRICT_SITE_HOSTS=true` (opt-in, default off): a request naming an unknown public host gets a 404. Turn it on after all live domains are registered. Requests with no host header (admin panel, health checks) are unaffected.
+- Links in guest emails and invite links use the complex's primary domain, falling back to `FRONTEND_URL`. Admin-console links (credentials, owner alerts) still use the admin URL.
+- `GET /api/site/current` (public) feeds the frontend's canonical URL, sitemap and robots.txt (`lib/getSiteOrigin.js`); `NEXT_PUBLIC_SITE_URL` is now only a fallback. Verified locally with a second hostname.
+- SuperAdmin API + admin page **Complexes** (create/activate complexes; add, remove and set-primary domains; a "Check" button that tests DNS, HTTPS and that the domain really serves this app). The Add user dialog gained the Site Admin role and a complex picker.
+- Tests: `tests/domains.test.js` (validation, uniqueness, primary rules, CORS, deactivation, strict mode). `npm test` now runs 15.
+- Still manual (runbook): attach the domain to the **frontend** service in Railway and give the customer the CNAME. I have not confirmed Railway's custom-domain limit per service, or that the edge preserves the public Host/X-Forwarded-Host; do both with the first real domain before relying on it.
+- The admin panel does not yet let a Site Admin sign in or has a complex switcher for the SuperAdmin; that is Phase 5.
+
 ## Phase 5 - SiteAdmin experience
 
 - Admin panel: nav adapts by role. SiteAdmin sees Site Content, Things To Do, Users (Owners of their complex), Properties, Bookings. SuperAdmin additionally sees Complexes and a complex switcher.

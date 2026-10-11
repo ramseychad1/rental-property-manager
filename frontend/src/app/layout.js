@@ -4,6 +4,7 @@ import { Providers } from "@/components/providers";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getBrand, getSiteContent } from "@/lib/getSiteContent";
+import { getSiteOrigin } from "@/lib/getSiteOrigin";
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -33,11 +34,11 @@ export const dynamic = "force-dynamic";
 // Title, description, keywords and share image come from admin > Site Content
 // (Site-wide > Search & sharing); the site name from Contact & branding.
 export async function generateMetadata() {
-  const [content, brand] = await Promise.all([getSiteContent(), getBrand()]);
+  const [content, brand, origin] = await Promise.all([getSiteContent(), getBrand(), getSiteOrigin()]);
   const seo = { title: brand.siteName, description: "", keywords: "", shareImage: "", ...(content?.seo ?? {}) };
   const shareImage = seo.shareImage || content?.hero?.bgImage || "";
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://rentalpropertymanager.com"),
+    metadataBase: new URL(origin),
     title: { default: seo.title, template: "%s" },
     description: seo.description || undefined,
     keywords: seo.keywords ? seo.keywords.split(",").map((k) => k.trim()).filter(Boolean) : undefined,

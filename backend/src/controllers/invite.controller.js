@@ -5,6 +5,7 @@ import { ok, ApiError } from "../lib/response.js";
 import { isSuperAdmin } from "../lib/access.js";
 import { notifyInvite } from "../lib/notifications.js";
 import { cleanUrl } from "../lib/emailTemplates.js";
+import { primaryOriginFor } from "../lib/siteResolver.js";
 
 // Trusted-renter invites. An owner emails a single-use link; whoever claims it
 // while signed in gets an OwnerGrant, i.e. standing access to all of that
@@ -40,8 +41,10 @@ const serializeGrant = (g) => ({
   ...(g.owner && { owner: { _id: g.owner.id, name: g.owner.name } }),
 });
 
-function inviteUrl(token) {
-  const site = cleanUrl(process.env.FRONTEND_URL) || "http://localhost:4000";
+// The link points at the owner's own complex domain.
+async function inviteUrl(token, owner) {
+  const membership = await prisma.siteMembership.findFirst({ where: { userId: owner.id } });
+  const site = cleanUrl((membership && (await primaryOriginFor(membership.siteId))) || process.env.FRONTEND_URL) || "http://localhost:4000";
   return `${site}/invite/${token}`;
 }
 
@@ -64,7 +67,7 @@ async function issueInvite({ owner, email, name }) {
     },
   });
 
-  const url = inviteUrl(token);
+  const url = await inviteUrl(token, owner);
   void notifyInvite({ owner, email, inviteeName: name, inviteUrl: url, days: INVITE_TTL_DAYS });
   return { invite, url };
 }

@@ -1,5 +1,7 @@
-export default function robots() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentalpropertymanager.com";
+import { getSiteOrigin } from "@/lib/getSiteOrigin";
+
+export default async function robots() {
+  const baseUrl = await getSiteOrigin();
 
   return {
     rules: {

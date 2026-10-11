@@ -1,5 +1,7 @@
-export default function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentalpropertymanager.com";
+import { getSiteOrigin } from "@/lib/getSiteOrigin";
+
+export default async function sitemap() {
+  const baseUrl = await getSiteOrigin();
   const lastModified = new Date();
 
   return [

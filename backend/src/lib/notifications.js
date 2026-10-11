@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.js";
+import { primaryOriginFor } from "./siteResolver.js";
 import { sendMail, getSystemConnection } from "./mailer.js";
 import { guestBookingEmail, ownerNewBookingEmail, otpEmail, contactEmail, inviteEmail } from "./emailTemplates.js";
 
@@ -11,13 +12,19 @@ async function ownerOf(property) {
   return property.ownerId ? prisma.user.findUnique({ where: { id: property.ownerId } }) : null;
 }
 
+// Links in guest emails point at the complex's own domain; FRONTEND_URL is the
+// fallback for a complex that has none (and for local dev).
+export async function siteOrigin(siteId) {
+  return (siteId && (await primaryOriginFor(siteId))) || process.env.FRONTEND_URL;
+}
+
 // booking must include `property`.
 export async function notifyBookingCreated(booking) {
   try {
     const p = booking.property;
     const owner = await ownerOf(p);
 
-    const guest = guestBookingEmail("received", booking, p, { ownerName: owner?.name, siteUrl: process.env.FRONTEND_URL });
+    const guest = guestBookingEmail("received", booking, p, { ownerName: owner?.name, siteUrl: await siteOrigin(p.siteId) });
     await sendMail({
       kind: "booking-received", to: booking.guestEmail, ...guest,
       ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id,
@@ -39,7 +46,7 @@ export async function notifyBookingEvent(event, booking, { attachments } = {}) {
   try {
     const p = booking.property;
     const owner = await ownerOf(p);
-    const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name, siteUrl: process.env.FRONTEND_URL });
+    const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name, siteUrl: await siteOrigin(p.siteId) });
     await sendMail({
       kind: `booking-${event}`, to: booking.guestEmail, ...mail,
       ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id, attachments,

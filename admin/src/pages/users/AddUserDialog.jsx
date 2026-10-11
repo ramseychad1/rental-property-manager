@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,14 +14,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usersApi } from "@/lib/api";
+import { sitesApi, usersApi } from "@/lib/api";
 
-const EMPTY = { name: "", email: "", role: "Owner" };
+const EMPTY = { name: "", email: "", role: "Owner", siteId: "" };
 
 export default function AddUserDialog({ open, onOpenChange, onCreated }) {
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+  const { data: sites = [] } = useQuery({ queryKey: ["sites"], queryFn: sitesApi.list, enabled: open });
+  const needsComplex = form.role !== "SuperAdmin";
+  const siteId = form.siteId || sites[0]?._id || "";
 
   const close = (v) => {
     if (!v) setForm(EMPTY);
@@ -31,7 +35,8 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
     e.preventDefault();
     setBusy(true);
     try {
-      const result = await usersApi.create({ ...form, email: form.email.trim() });
+      const { siteId: _ignored, ...rest } = form;
+      const result = await usersApi.create({ ...rest, email: form.email.trim(), ...(needsComplex && siteId && { siteId }) });
       setForm(EMPTY);
       onCreated(result);
     } catch (err) {
@@ -67,10 +72,24 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Owner">Owner — manages only their own properties</SelectItem>
+                <SelectItem value="SiteAdmin">Site Admin — runs one complex's content and owners</SelectItem>
                 <SelectItem value="SuperAdmin">Super Admin — full access to everything</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {needsComplex && sites.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Complex</Label>
+              <Select value={siteId} onValueChange={set("siteId")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {sites.map((s) => (
+                    <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => close(false)}>Cancel</Button>

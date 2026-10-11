@@ -121,6 +121,7 @@ export const api = {
 
   // Homepage content (admin-editable; see admin "Site Content")
   getSiteContent: () => request("/site-content", { cache: "no-store" }),
+  getCurrentSite: () => request("/site/current", { cache: "no-store" }),
 
   // Properties
   // Admins actively edit these via the admin panel and expect the public

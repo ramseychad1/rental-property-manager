@@ -8,6 +8,7 @@ import { attachUser, enforcePasswordChange } from "./middleware/auth.js";
 import { resolveSite } from "./middleware/site.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { UPLOADS_DIR } from "./lib/storage.js";
+import { isComplexOrigin } from "./lib/siteResolver.js";
 
 const CLIENT_URLS = (process.env.CLIENT_URLS || "")
   .split(",")
@@ -19,10 +20,13 @@ export const app = express();
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow same-origin/non-browser requests (no Origin header) and any
-      // configured client URL.
+      // Allow same-origin/non-browser requests (no Origin header), any
+      // configured client URL (CLIENT_URLS), and every complex's own domain
+      // (SiteDomain), so onboarding a domain needs no env edit or redeploy.
       if (!origin || CLIENT_URLS.includes(origin)) return callback(null, true);
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+      isComplexOrigin(origin)
+        .then((allowed) => (allowed ? callback(null, true) : callback(new Error(`Origin ${origin} not allowed by CORS`))))
+        .catch(callback);
     },
     credentials: true,
   }),

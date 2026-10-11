@@ -50,6 +50,20 @@ async function request(
     signal,
   };
 
+  // Server-side fetches have no browser, so pass along the host the visitor
+  // used; the backend picks the complex from it. (Browser calls get this from
+  // src/proxy.js.) Outside a request - e.g. at build time - there's no host.
+  if (isServer) {
+    try {
+      const { headers: requestHeaders } = await import("next/headers");
+      const h = await requestHeaders();
+      const host = h.get("x-forwarded-host") || h.get("host");
+      if (host) fetchOptions.headers["X-Site-Host"] = host;
+    } catch {
+      // no request context
+    }
+  }
+
   if (isServer && isGet) {
     fetchOptions.cache = cache ?? "force-cache";
     if (fetchOptions.cache !== "no-store") {

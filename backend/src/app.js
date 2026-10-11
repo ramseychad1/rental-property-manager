@@ -5,6 +5,7 @@ import morgan from "morgan";
 
 import routes from "./routes/index.js";
 import { attachUser, enforcePasswordChange } from "./middleware/auth.js";
+import { resolveSite } from "./middleware/site.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { UPLOADS_DIR } from "./lib/storage.js";
 
@@ -35,6 +36,7 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 // Served only when no S3-compatible bucket is configured - see lib/storage.js.
 app.use("/uploads", express.static(UPLOADS_DIR));
 
+app.use(resolveSite);
 app.use(attachUser);
 
 app.use("/api", enforcePasswordChange, routes);

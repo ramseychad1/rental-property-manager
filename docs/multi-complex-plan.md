@@ -62,6 +62,13 @@ Cross-complex ids return 404, like cross-owner ids do today.
 - Admin panel requests have no complex host. Site context there comes from the user's membership (the only one for now; later the session's active complex), not the domain.
 - Replace the hardcoded `"default"` lookup in `siteContent.controller.js`.
 
+**Phase 2 status: BUILT locally 2026-10-11, not committed or deployed.** What exists:
+- `backend/src/lib/siteResolver.js` + `middleware/site.js`: `req.site` from `X-Site-Host`, then `Origin`, via a 60s in-memory hostname cache (`invalidateSiteCache()` for when domain editing is built). **Soft mode:** an unknown host falls back to the default complex (`req.siteMatched = false`) instead of 404, so production, the admin panel and health checks keep working. Strict handling arrives with Phase 3.
+- `frontend/src/proxy.js` (Next 16's replacement for middleware) sets `x-site-host` on `/api/*` calls, and the existing rewrite forwards it. `services/api.js` adds the same header on server-side fetches from the incoming request. Verified locally: the same backend returned different content for `Host: b.test` on both the browser path and SSR, and unknown hosts fell back to default.
+- The site-content controller now reads/writes `req.site`. The admin panel's host matches no complex, so admin edits still hit the default complex until Phase 5 adds a complex selector.
+- Not yet done: CORS still comes from `CLIENT_URLS` (Phase 4), and a hostname is trusted as a *public-data selector only*, never for authorization.
+- Open point to verify on Railway: that the edge preserves the public `Host`/`X-Forwarded-Host` when proxying to the Next service. Check with a real custom domain in Phase 4.
+
 ## Phase 3 - Scoping (the leak-prevention phase)
 
 Central helpers in `lib/access.js` carry the new rule so call sites don't re-derive it:

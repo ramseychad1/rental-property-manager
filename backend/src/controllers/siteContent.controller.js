@@ -1,18 +1,20 @@
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { saveFile } from "../lib/storage.js";
-import { getDefaultSite } from "../lib/membership.js";
 import { SECTIONS, SECTION_SCHEMAS, SECTION_DEFAULTS } from "../lib/siteContent.js";
 
+
+// The complex this request is for (see middleware/site.js).
+const getSite = (req) => req.site;
 
 function sectionOr404(name) {
   if (!SECTIONS.includes(name)) throw new ApiError("Unknown content section.", 404);
   return name;
 }
 
-export async function getSiteContent(_req, res, next) {
+export async function getSiteContent(req, res, next) {
   try {
-    const site = await getDefaultSite();
+    const site = getSite(req);
     const rows = await prisma.siteContent.findMany({ where: { siteId: site.id } });
     const stored = Object.fromEntries(rows.map((r) => [r.section, r.data]));
     // Stored data wins, but new default fields still show up for sections saved
@@ -30,7 +32,7 @@ export async function saveSection(req, res, next) {
   try {
     const section = sectionOr404(req.params.section);
     const data = SECTION_SCHEMAS[section].parse(req.body);
-    const site = await getDefaultSite();
+    const site = getSite(req);
     await prisma.siteContent.upsert({
       where: { siteId_section: { siteId: site.id, section } },
       update: { data },
@@ -45,7 +47,7 @@ export async function saveSection(req, res, next) {
 export async function resetSection(req, res, next) {
   try {
     const section = sectionOr404(req.params.section);
-    const site = await getDefaultSite();
+    const site = getSite(req);
     await prisma.siteContent.deleteMany({ where: { siteId: site.id, section } });
     return ok(res, SECTION_DEFAULTS[section], "Section reset to defaults");
   } catch (err) {

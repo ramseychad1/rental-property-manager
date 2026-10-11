@@ -13,7 +13,6 @@ import {
   Tags,
   Compass,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { toast } from "sonner";
 
 import PageHeader from "@/components/common/PageHeader";
@@ -95,13 +94,7 @@ export default function ThingsToDoList() {
   const cards = useMemo(
     () =>
       items.map((item) => (
-        <motion.div
-          key={item._id}
-          layout
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <div key={item._id} className="fade-in-up">
           <Card className="group rounded-xl overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-foreground/30">
             <Link
               to={`/things-to-do/${item._id}`}
@@ -181,7 +174,7 @@ export default function ThingsToDoList() {
               </div>
             </div>
           </Card>
-        </motion.div>
+        </div>
       )),
     [items, navigate],
   );

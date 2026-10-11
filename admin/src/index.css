@@ -333,3 +333,8 @@
 .app-main-enter {
   animation: app-main-enter 0.25s ease-out;
 }
+
+/* Same idea for cards/panels: visible by default, fades up when it can. */
+.fade-in-up {
+  animation: app-main-enter 0.25s ease-out;
+}

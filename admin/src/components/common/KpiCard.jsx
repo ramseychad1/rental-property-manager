@@ -1,16 +1,11 @@
 import { cn } from "@/lib/utils";
-import { motion } from "motion/react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export default function KpiCard({ label, value, delta, hint, icon: Icon, accent = false, testid }) {
   const positive = typeof delta === "number" ? delta >= 0 : true;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-    >
+    <div className="fade-in-up">
       <Card
         data-testid={testid}
         className={cn(
@@ -58,6 +53,6 @@ export default function KpiCard({ label, value, delta, hint, icon: Icon, accent 
           </div>
         )}
       </Card>
-    </motion.div>
+    </div>
   );
 }

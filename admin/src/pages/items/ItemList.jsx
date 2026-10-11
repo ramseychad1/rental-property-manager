@@ -42,7 +42,6 @@ import { itemsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import { vertical } from "@/config/vertical";
 import { fmtCurrency } from "@/lib/formatters";
-import { motion } from "motion/react";
 import { toast } from "sonner";
 
 // Super Admin only: who manages this property (the API only sends `owner` to them).
@@ -100,13 +99,7 @@ export default function ItemListPage() {
   const cards = useMemo(
     () =>
       items.map((p) => (
-        <motion.div
-          key={p._id}
-          layout
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <div key={p._id} className="fade-in-up">
           <Card
             data-testid={`item-card-${p._id}`}
             className="group rounded-xl overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-foreground/30"
@@ -184,7 +177,7 @@ export default function ItemListPage() {
               </div>
             </div>
           </Card>
-        </motion.div>
+        </div>
       )),
     [items, navigate, cap],
   );

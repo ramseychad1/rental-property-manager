@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Database,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { vertical } from "@/config/vertical";
 import { toast } from "sonner";
 
@@ -66,11 +65,8 @@ export default function LoginPage() {
 
       {/* Login Form */}
       <div className="relative z-10 w-full max-w-md px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="rounded-3xl overflow-hidden border border-[#2A2A2A] bg-[#111111]/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+        <div
+          className="fade-in-up rounded-3xl overflow-hidden border border-[#2A2A2A] bg-[#111111]/90 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl"
         >
           <div className="py-5 mb-4 flex items-center justify-center bg-[#F5F5F5]">
             <img src="/logo.png" alt="Rental Property Manager" className="h-32 w-auto" />
@@ -159,7 +155,7 @@ export default function LoginPage() {
               </Button>
             </form>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

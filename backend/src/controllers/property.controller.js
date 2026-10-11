@@ -16,6 +16,7 @@ import {
   findViewableProperty,
 } from "../lib/access.js";
 import { assertTermsSumTo100 } from "../lib/paymentSchedule.js";
+import { getDefaultSite } from "../lib/membership.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
 
@@ -184,8 +185,10 @@ export async function createProperty(req, res, next) {
     const thumbnail = thumbnailFile ? await saveFile(thumbnailFile) : null;
     const gallery = await Promise.all(galleryFiles.map((f) => saveFile(f)));
 
+    const site = await getDefaultSite();
     const property = await prisma.property.create({
       data: {
+        siteId: site.id,
         title: body.title,
         description: body.description,
         minNights: body.minNights,

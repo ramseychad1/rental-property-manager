@@ -5,6 +5,7 @@ import { serializeThingToDo } from "../lib/serialize.js";
 import { isSuperAdmin } from "../lib/access.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { unflatten } from "../middleware/upload.js";
+import { getDefaultSite } from "../lib/membership.js";
 
 // Must match the X-Client header set in admin/src/lib/api.js.
 const ADMIN_CLIENT = "rental-property-manager-admin-panel";
@@ -76,8 +77,10 @@ export async function createThingToDo(req, res, next) {
     const body = thingSchema.parse(unflatten(req.body));
     const image = req.file ? await saveFile(req.file) : null;
 
+    const site = await getDefaultSite();
     const item = await prisma.thingToDo.create({
       data: {
+        siteId: site.id,
         name: body.name,
         description: body.description,
         category: body.category,

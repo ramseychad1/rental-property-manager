@@ -45,6 +45,13 @@ Cross-complex ids return 404, like cross-owner ids do today.
 - Bookings, seasons, invites and grants inherit the site through property/owner. No column needed, but add a DB-level check or test that an invite's owner and a grant's guest share a site.
 - Backfill: every existing row gets the current `default` site. Insert a `SiteDomain` for the current production frontend host. Production behaviour must be identical after this phase.
 
+**Phase 1 status: BUILT locally 2026-10-11, not committed or deployed.** Deviations from the text above:
+- `Property.siteId`, `ThingToDo.siteId` and `VerificationCode.siteId` are **nullable** for now (backfilled, no nulls locally). Making them required would break inserts until the code sets them, so tighten to NOT NULL in Phase 3. Property and Things To Do creation already write the default site's id.
+- Users are kept in step with memberships from day one: signup and user creation create the membership in the same write, and a role change replaces it in a transaction (`backend/src/lib/membership.js`). Otherwise memberships would drift between Phase 1 and Phase 3.
+- The backfill inserts the production frontend hostname (`frontend-production-c0d1.up.railway.app`) as the default site's primary `SiteDomain`.
+- `getDefaultSite()` moved from the site-content controller into `lib/membership.js`.
+- The one-membership-per-user rule is currently satisfied by `syncMembership` replacing rows; an explicit guard arrives with the scope editor in Phase 5.
+
 ## Phase 2 - Site resolution
 
 - New middleware `resolveSite` (before `attachUser`) sets `req.site` from the **public hostname the browser used**.

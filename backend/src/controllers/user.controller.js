@@ -8,6 +8,7 @@ import { COOKIE_NAME, cookieOptions } from "../lib/jwt.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { isSuperAdmin } from "../lib/access.js";
 import { generateTempPassword } from "../lib/tempPassword.js";
+import { getDefaultSite, membershipCreate, syncMembership } from "../lib/membership.js";
 import { sendMail, GOOGLE_OAUTH } from "../lib/mailer.js";
 import { decrypt } from "../lib/crypto.js";
 import { credentialsEmail } from "../lib/emailTemplates.js";
@@ -186,6 +187,7 @@ export async function createUser(req, res, next) {
     }
 
     const tempPassword = generateTempPassword();
+    const site = await getDefaultSite();
     const user = await prisma.user.create({
       data: {
         name: body.name,
@@ -194,6 +196,7 @@ export async function createUser(req, res, next) {
         passwordHash: await bcrypt.hash(tempPassword, 10),
         isVerified: true,
         mustChangePassword: true,
+        ...membershipCreate(site, body.role),
       },
     });
 
@@ -223,7 +226,11 @@ export async function updateUser(req, res, next) {
       throw new ApiError("Guest accounts can't be changed to staff roles here.", 400);
     }
 
-    const user = await prisma.user.update({ where: { id: target.id }, data: body });
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({ where: { id: target.id }, data: body });
+      if (body.role && body.role !== target.role) await syncMembership(tx, target.id, body.role);
+      return updated;
+    });
     return ok(res, serializeUser(user), "User updated");
   } catch (err) {
     next(err);

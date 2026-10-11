@@ -5,6 +5,7 @@ import { ok, fail, ApiError } from "../lib/response.js";
 import { serializeUser } from "../lib/serialize.js";
 import { signToken, COOKIE_NAME, cookieOptions } from "../lib/jwt.js";
 import { issueCode, verifyCode } from "../lib/otp.js";
+import { getDefaultSite, membershipCreate } from "../lib/membership.js";
 
 const emailSchema = z.string().trim().email();
 
@@ -51,6 +52,7 @@ export async function register(req, res, next) {
     if (!valid) throw new ApiError("Invalid or expired OTP.", 400);
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const site = await getDefaultSite();
     const user = await prisma.user.create({
       data: {
         name,
@@ -58,6 +60,7 @@ export async function register(req, res, next) {
         passwordHash,
         phone: phone || null,
         isVerified: true,
+        ...membershipCreate(site, "Guest"),
       },
     });
 

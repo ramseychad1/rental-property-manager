@@ -1,12 +1,9 @@
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { saveFile } from "../lib/storage.js";
+import { getDefaultSite } from "../lib/membership.js";
 import { SECTIONS, SECTION_SCHEMAS, SECTION_DEFAULTS } from "../lib/siteContent.js";
 
-// Single-tenant for now: everything hangs off one "default" site row.
-function getDefaultSite() {
-  return prisma.site.upsert({ where: { slug: "default" }, update: {}, create: { slug: "default" } });
-}
 
 function sectionOr404(name) {
   if (!SECTIONS.includes(name)) throw new ApiError("Unknown content section.", 404);

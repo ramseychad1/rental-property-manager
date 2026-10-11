@@ -35,7 +35,8 @@ const schema = z
     title: z.string().min(2, "Title required"),
     description: z.string().min(10, "At least 10 characters"),
     location: z.object({
-      url: z.string().url('Must be a valid URL'),
+      // Optional: blank means the public map is found by searching the address.
+      url: z.string().trim().url('Must be a valid URL').or(z.literal("")),
       country: z.string().min(1, "Country required"),
       city: z.string().min(1, "City required"),
       address: z.string().min(3, "Address required"),
@@ -516,7 +517,7 @@ export default function ItemFormPage({ mode = "create" }) {
 
               <div className="md:col-span-2 space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <Label>Url</Label>
+                  <Label>Url (optional)</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <button

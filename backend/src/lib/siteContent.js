@@ -232,7 +232,8 @@ export const SECTION_DEFAULTS = {
     x: "",
   },
   seo: {
-    title: "Rental Property Manager",
+    // Blank = use the site name (Contact & branding), so each complex gets its own.
+    title: "",
     description: "Find and book vacation rentals with friendly local support.",
     keywords: "",
     shareImage: "",

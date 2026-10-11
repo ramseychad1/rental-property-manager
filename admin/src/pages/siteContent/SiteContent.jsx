@@ -184,7 +184,7 @@ const SITE_SECTIONS = [
     label: "Search & sharing",
     description: "How the site appears in Google results and when someone shares a link.",
     fields: [
-      { name: "title", label: "Site title", type: "text" },
+      { name: "title", label: "Site title (leave blank to use the site name)", type: "text" },
       { name: "description", label: "Site description", type: "textarea", rows: 2 },
       { name: "keywords", label: "Keywords (comma separated, optional)", type: "text" },
       { name: "shareImage", label: "Sharing image (defaults to the homepage hero image)", type: "image" },

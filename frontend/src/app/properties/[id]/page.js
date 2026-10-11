@@ -1,4 +1,5 @@
 import { api } from "@/services/api";
+import { getBrand, pageTitle } from "@/lib/getSiteContent";
 import { resolveEmbedUrl } from "@/lib/mapEmbed";
 import PropertyDetailClient from "@/components/property/PropertyDetailClient";
 
@@ -24,17 +25,17 @@ async function getPropertyPayload(id) {
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const { property } = await getPropertyPayload(id);
+  const [{ property }, brand] = await Promise.all([getPropertyPayload(id), getBrand()]);
 
   if (!property) {
     return {
-      title: "Property | Rental Property Manager",
+      title: pageTitle("Property", brand),
       robots: { index: false, follow: false },
     };
   }
 
   return {
-    title: `${property.title} | Rental Property Manager`,
+    title: pageTitle(property.title, brand),
     ...(property.isPrivate && { robots: { index: false, follow: false } }),
     description: property.description,
     openGraph: {

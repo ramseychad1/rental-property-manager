@@ -36,7 +36,8 @@ export const dynamic = "force-dynamic";
 // (Site-wide > Search & sharing); the site name from Contact & branding.
 export async function generateMetadata() {
   const [content, brand, origin, site] = await Promise.all([getSiteContent(), getBrand(), getSiteOrigin(), getCurrentSite()]);
-  const seo = { title: brand.siteName, description: "", keywords: "", shareImage: "", ...(content?.seo ?? {}) };
+  const seo = { description: "", keywords: "", shareImage: "", ...(content?.seo ?? {}) };
+  seo.title = seo.title || brand.siteName;
   const shareImage = seo.shareImage || content?.hero?.bgImage || "";
   return {
     metadataBase: new URL(origin),

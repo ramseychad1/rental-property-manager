@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, CheckCircle2, Globe, Loader2, Plus, Star, Trash2, XCircle } from "lucide-react";
+import { Building2, Check, CheckCircle2, Globe, Loader2, Pencil, Plus, Star, Trash2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
@@ -107,6 +107,8 @@ function DomainRow({ site, domain, onChanged }) {
 
 function SiteCard({ site, onChanged }) {
   const [hostname, setHostname] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(site.name);
   const qc = useQueryClient();
 
   const add = useMutation({
@@ -117,6 +119,17 @@ function SiteCard({ site, onChanged }) {
       onChanged();
     },
     onError: (err) => toast.error(err.normalizedMessage || "Could not add domain"),
+  });
+
+  const rename = useMutation({
+    mutationFn: () => sitesApi.update(site._id, { name: name.trim() }),
+    onSuccess: () => {
+      setRenaming(false);
+      toast.success("Complex renamed");
+      onChanged();
+      qc.invalidateQueries({ queryKey: ["site-current"] });
+    },
+    onError: (err) => toast.error(err.normalizedMessage || "Could not rename"),
   });
 
   const toggle = useMutation({
@@ -134,7 +147,31 @@ function SiteCard({ site, onChanged }) {
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-muted-foreground" />
-            <h2 className="font-semibold text-lg">{site.name}</h2>
+            {renaming ? (
+              <form
+                className="flex items-center gap-1"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (name.trim() && name.trim() !== site.name) rename.mutate();
+                  else setRenaming(false);
+                }}
+              >
+                <Input autoFocus className="h-8 w-64" value={name} onChange={(e) => setName(e.target.value)} aria-label="Complex name" />
+                <Button type="submit" size="icon" variant="ghost" aria-label="Save name" disabled={rename.isPending || !name.trim()}>
+                  {rename.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </Button>
+                <Button type="button" size="icon" variant="ghost" aria-label="Cancel" onClick={() => { setRenaming(false); setName(site.name); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </form>
+            ) : (
+              <>
+                <h2 className="font-semibold text-lg">{site.name}</h2>
+                <Button size="icon" variant="ghost" className="h-7 w-7" aria-label={`Rename ${site.name}`} onClick={() => setRenaming(true)}>
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            )}
             {!site.isActive && <Badge variant="outline">Inactive</Badge>}
           </div>
           <p className="text-xs text-muted-foreground font-mono">{site.slug}</p>

@@ -59,6 +59,8 @@ async function request(
       const h = await requestHeaders();
       const host = h.get("x-forwarded-host") || h.get("host");
       if (host) fetchOptions.headers["X-Site-Host"] = host;
+      const slug = h.get("x-site-slug");
+      if (slug) fetchOptions.headers["X-Site-Slug"] = slug;
     } catch {
       // no request context
     }

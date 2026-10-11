@@ -135,6 +135,13 @@ Route changes:
 - Tests: `tests/scope.test.js`; `npm test` now runs 20 serially (`--test-concurrency=1`, because the files share one local database).
 - Known rough edges: a Site Admin still sees edit links on other owners' properties (the API refuses them with 404); not browser-tested (see status note).
 
+**Preview mode: BUILT locally 2026-10-11, not committed or deployed.** Lets several complexes be demoed on one shared address (no extra domains or services):
+- Visiting `https://<shared-host>/c/<slug>` stores the complex in a cookie (`rpm_preview`, 7 days) and redirects to the normal URL; `/c/_exit` clears it. A banner ("Previewing X. Exit preview") shows, and the page is `noindex`.
+- Implemented in `frontend/src/proxy.js` (cookie to `x-site-slug`; client-sent slugs are stripped), `services/api.js` (SSR passes it on) and the backend `middleware/site.js` (`X-Site-Slug`). `GET /api/site/current` reports `preview`.
+- Only honored on **preview hosts**: `localhost` always, plus `SITE_PREVIEW_HOSTS` (comma-separated), which must be set on **both** the backend and the frontend service. Never honored on a complex's real domain.
+- Not for testing emails: invite and booking links still use the complex's own registered domain (or the default fallback). Sign-in is per host, so switching complexes signs you out of the previous one.
+- Test: `tests/domains.test.js` covers local host, real domain, unlisted host, listed host, unknown and inactive slugs. Verified through the running frontend locally (entry redirect, cookie, banner, spoofed header ignored).
+
 ## Phase 6 - Verification
 
 - Automated cross-complex tests (none exist in the repo today, so this adds the harness): for each resource, a user in complex A requesting complex B's id gets 404 on read, update, delete, list and count; guest cookie from A is rejected on B; SSR renders the right complex for each host.

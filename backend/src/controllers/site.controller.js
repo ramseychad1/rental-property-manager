@@ -13,6 +13,7 @@ export async function currentSite(req, res, next) {
       name: req.site.name,
       origin: (await primaryOriginFor(req.site.id)) ?? null,
       matched: !!req.siteMatched,
+      preview: !!req.sitePreview,
     });
   } catch (err) {
     next(err);

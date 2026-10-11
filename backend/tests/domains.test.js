@@ -17,9 +17,10 @@ const jars = {};
 const U = {};
 let siteId;
 
-async function api(method, path, { as, host, origin, body } = {}) {
+async function api(method, path, { as, host, slug, origin, body } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (host) headers["X-Site-Host"] = host;
+  if (slug) headers["X-Site-Slug"] = slug;
   if (origin) headers.Origin = origin;
   if (as && jars[as]) headers.Cookie = jars[as];
   const res = await fetch(base + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
@@ -124,4 +125,39 @@ test("strict mode refuses unknown public hosts", async () => {
     delete process.env.STRICT_SITE_HOSTS;
   }
   assert.equal((await api("GET", "/api/health", { host: "nobody.xd-test.com" })).status, 200);
+});
+
+test("preview mode shows a complex by slug on shared hosts only", async () => {
+  const preview = await prisma.site.create({ data: { slug: "xd-preview", name: "Preview Complex" } });
+  const real = await prisma.site.create({ data: { slug: "xd-real", name: "Real Complex" } });
+  await prisma.siteDomain.create({ data: { hostname: "real.xd-test.com", siteId: real.id, isPrimary: true } });
+  invalidateSiteCache();
+
+  const cur = (opts) => api("GET", "/api/site/current", opts).then((r) => r.body.data);
+
+  // localhost is always a preview host
+  const onLocal = await cur({ host: "localhost:4000", slug: "xd-preview" });
+  assert.equal(onLocal.name, "Preview Complex");
+  assert.equal(onLocal.preview, true);
+
+  // not on a complex's real domain
+  const onReal = await cur({ host: "real.xd-test.com", slug: "xd-preview" });
+  assert.equal(onReal.name, "Real Complex");
+  assert.equal(onReal.preview, false);
+
+  // not on an arbitrary host...
+  assert.equal((await cur({ host: "share.xd-test.com", slug: "xd-preview" })).preview, false);
+  // ...until it's listed as a preview host
+  process.env.SITE_PREVIEW_HOSTS = "share.xd-test.com";
+  try {
+    assert.equal((await cur({ host: "share.xd-test.com", slug: "xd-preview" })).name, "Preview Complex");
+  } finally {
+    delete process.env.SITE_PREVIEW_HOSTS;
+  }
+
+  // unknown or inactive slugs are ignored
+  assert.equal((await cur({ host: "localhost", slug: "nope" })).preview, false);
+  await prisma.site.update({ where: { id: preview.id }, data: { isActive: false } });
+  invalidateSiteCache();
+  assert.equal((await cur({ host: "localhost", slug: "xd-preview" })).preview, false);
 });

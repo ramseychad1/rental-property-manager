@@ -4,7 +4,8 @@ import { Providers } from "@/components/providers";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getBrand, getSiteContent } from "@/lib/getSiteContent";
-import { getSiteOrigin } from "@/lib/getSiteOrigin";
+import { getSiteOrigin, getCurrentSite } from "@/lib/getSiteOrigin";
+import PreviewBanner from "@/components/layout/PreviewBanner";
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -34,7 +35,7 @@ export const dynamic = "force-dynamic";
 // Title, description, keywords and share image come from admin > Site Content
 // (Site-wide > Search & sharing); the site name from Contact & branding.
 export async function generateMetadata() {
-  const [content, brand, origin] = await Promise.all([getSiteContent(), getBrand(), getSiteOrigin()]);
+  const [content, brand, origin, site] = await Promise.all([getSiteContent(), getBrand(), getSiteOrigin(), getCurrentSite()]);
   const seo = { title: brand.siteName, description: "", keywords: "", shareImage: "", ...(content?.seo ?? {}) };
   const shareImage = seo.shareImage || content?.hero?.bgImage || "";
   return {
@@ -50,6 +51,8 @@ export async function generateMetadata() {
       images: shareImage ? [shareImage] : undefined,
     },
     icons: { icon: "/favicon.svg" },
+    // A preview of a complex on a shared host must not be indexed as that host.
+    ...(site?.preview && { robots: { index: false, follow: false } }),
   };
 }
 
@@ -59,6 +62,7 @@ export default async function RootLayout({ children }) {
     <html lang="en" className={`${archivo.variable} ${manrope.variable} ${caveat.variable}`}>
       <body className="min-h-screen bg-white antialiased">
         <Providers>
+          <PreviewBanner />
           <div className="flex min-h-screen flex-col">
             <Header brand={brand} />
             <main className="flex-1">{children}</main>

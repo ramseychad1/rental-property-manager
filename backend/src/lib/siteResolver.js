@@ -5,7 +5,7 @@ import { getDefaultSite } from "./membership.js";
 // is tiny and read on every request, so it's cached briefly in memory; call
 // invalidateSiteCache() after editing domains.
 const TTL_MS = 60_000;
-let cache = { at: 0, byHost: new Map(), primaryBySite: new Map(), fallback: null };
+let cache = { at: 0, byHost: new Map(), bySlug: new Map(), primaryBySite: new Map(), fallback: null };
 
 // "Example.com:443." -> "example.com"
 export function normalizeHost(value) {
@@ -22,18 +22,25 @@ export function normalizeHost(value) {
 }
 
 export function invalidateSiteCache() {
-  cache = { at: 0, byHost: new Map(), primaryBySite: new Map(), fallback: null };
+  cache = { at: 0, byHost: new Map(), bySlug: new Map(), primaryBySite: new Map(), fallback: null };
 }
 
 async function load() {
   if (cache.fallback && Date.now() - cache.at < TTL_MS) return cache;
-  const [domains, fallback] = await Promise.all([
+  const [domains, sites, fallback] = await Promise.all([
     prisma.siteDomain.findMany({ where: { site: { isActive: true } }, include: { site: true } }),
+    prisma.site.findMany({ where: { isActive: true } }),
     getDefaultSite(),
   ]);
   const primaryBySite = new Map();
   for (const d of domains) if (d.isPrimary) primaryBySite.set(d.siteId, d.hostname);
-  cache = { at: Date.now(), byHost: new Map(domains.map((d) => [d.hostname, d.site])), primaryBySite, fallback };
+  cache = {
+    at: Date.now(),
+    byHost: new Map(domains.map((d) => [d.hostname, d.site])),
+    bySlug: new Map(sites.map((s) => [s.slug, s])),
+    primaryBySite,
+    fallback,
+  };
   return cache;
 }
 
@@ -70,4 +77,27 @@ export async function isComplexOrigin(origin) {
   }
   const h = normalizeHost(host);
   return byHost.has(h) && origin === originFor(h);
+}
+
+// --- Preview mode ------------------------------------------------------------
+// On a shared host (the Railway address, localhost) a visitor can be shown any
+// complex by slug, so several complexes can be demoed without their own
+// domains. Never honored on a complex's real domain. Keep in sync with
+// frontend/src/proxy.js.
+const LOCAL_PREVIEW_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
+export function isPreviewHost(host) {
+  const h = normalizeHost(host);
+  if (!h) return false;
+  if (LOCAL_PREVIEW_HOSTS.has(h) || h.endsWith(".localhost")) return true;
+  return (process.env.SITE_PREVIEW_HOSTS || "")
+    .split(",")
+    .map((x) => normalizeHost(x))
+    .filter(Boolean)
+    .includes(h);
+}
+
+export async function resolveSiteBySlug(slug) {
+  const { bySlug } = await load();
+  return bySlug.get(String(slug || "").toLowerCase()) ?? null;
 }

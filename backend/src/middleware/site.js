@@ -1,4 +1,4 @@
-import { resolveSiteForHosts } from "../lib/siteResolver.js";
+import { resolveSiteForHosts, resolveSiteBySlug, isPreviewHost } from "../lib/siteResolver.js";
 import { fail } from "../lib/response.js";
 
 // Sets req.site to the complex the request is for.
@@ -17,7 +17,21 @@ import { fail } from "../lib/response.js";
 export async function resolveSite(req, res, next) {
   try {
     const origin = req.get("origin");
-    const { site, matched } = await resolveSiteForHosts([req.get("x-site-host"), origin]);
+    let { site, matched } = await resolveSiteForHosts([req.get("x-site-host"), origin]);
+
+    // Preview mode: on a shared preview host, X-Site-Slug picks the complex.
+    // Ignored everywhere else, so a real domain can't be made to show another
+    // complex.
+    const slug = req.get("x-site-slug");
+    req.sitePreview = false;
+    if (slug && isPreviewHost(req.get("x-site-host"))) {
+      const previewSite = await resolveSiteBySlug(slug);
+      if (previewSite) {
+        site = previewSite;
+        matched = true;
+        req.sitePreview = true;
+      }
+    }
     // Opt-in (STRICT_SITE_HOSTS=true, set once every live domain is registered):
     // a request that names a public host we don't know is refused rather than
     // served the default complex's pages.

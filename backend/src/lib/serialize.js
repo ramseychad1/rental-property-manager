@@ -31,6 +31,8 @@ export function serializeUser(u) {
     isActive: u.isActive,
     mustChangePassword: u.mustChangePassword,
     createdAt: u.createdAt,
+    lastLoginAt: u.lastLoginAt ?? null,
+    lastSeenAt: u.lastSeenAt ?? null,
   };
 }
 

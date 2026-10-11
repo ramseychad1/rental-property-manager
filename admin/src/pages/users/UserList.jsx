@@ -37,7 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { usersApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
-import { fmtDate } from "@/lib/formatters";
+import { fmtDate, fmtRelative } from "@/lib/formatters";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import UserBookings from "./UserBookings";
 import AddUserDialog from "./AddUserDialog";
@@ -186,6 +186,7 @@ export default function UserListPage() {
               <TableHead className="overline">Role</TableHead>
               <TableHead className="overline">Source</TableHead>
               <TableHead className="overline">Joined</TableHead>
+              <TableHead className="overline">Last seen</TableHead>
               <TableHead className="overline text-right">Open</TableHead>
             </TableRow>
           </TableHeader>
@@ -194,7 +195,7 @@ export default function UserListPage() {
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -203,7 +204,7 @@ export default function UserListPage() {
               ))
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
+                <TableCell colSpan={8} className="p-0">
                   <EmptyState
                     icon={Users}
                     title="No users found"
@@ -261,6 +262,13 @@ export default function UserListPage() {
 
                   <TableCell className="text-sm text-muted-foreground font-mono whitespace-nowrap">
                     {fmtDate(u.createdAt)}
+                  </TableCell>
+
+                  <TableCell
+                    className="text-sm text-muted-foreground font-mono whitespace-nowrap"
+                    title={u.lastSeenAt ? fmtDate(u.lastSeenAt, "MMM d, yyyy h:mm a") : ""}
+                  >
+                    {u.lastSeenAt ? fmtRelative(u.lastSeenAt) : "Never"}
                   </TableCell>
 
                   <TableCell className="text-right">
@@ -341,6 +349,16 @@ export default function UserListPage() {
                 <div className="text-sm flex justify-between">
                   <span className="text-muted-foreground">Joined</span>
                   <span className="font-mono">{fmtDate(active.createdAt)}</span>
+                </div>
+
+                <div className="text-sm flex justify-between">
+                  <span className="text-muted-foreground">Last sign-in</span>
+                  <span className="font-mono">{active.lastLoginAt ? fmtDate(active.lastLoginAt, "MMM d, yyyy h:mm a") : "Never"}</span>
+                </div>
+
+                <div className="text-sm flex justify-between">
+                  <span className="text-muted-foreground">Last seen</span>
+                  <span className="font-mono">{active.lastSeenAt ? fmtRelative(active.lastSeenAt) : "Never"}</span>
                 </div>
               </Card>
 

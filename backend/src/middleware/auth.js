@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma.js";
 import { fail } from "../lib/response.js";
 import { isStaff, isSuperAdmin } from "../lib/access.js";
 
+const SEEN_THROTTLE_MS = 5 * 60 * 1000;
+
 export async function attachUser(req, _res, next) {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) return next();
@@ -10,7 +12,14 @@ export async function attachUser(req, _res, next) {
   try {
     const payload = verifyToken(token);
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (user && user.isActive) req.user = user;
+    if (user && user.isActive) {
+      req.user = user;
+      // Throttled so a busy page doesn't write on every request.
+      if (!user.lastSeenAt || Date.now() - user.lastSeenAt.getTime() > SEEN_THROTTLE_MS) {
+        user.lastSeenAt = new Date();
+        prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: user.lastSeenAt } }).catch(() => {});
+      }
+    }
   } catch {
     // ignore invalid/expired token - request proceeds unauthenticated
   }

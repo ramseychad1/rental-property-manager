@@ -87,6 +87,10 @@ export async function login(req, res, next) {
     if (!valid) throw new ApiError("Invalid email or password.", 401);
     if (!user.isActive) throw new ApiError("This account has been deactivated.", 403);
 
+    const now = new Date();
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, lastSeenAt: now } });
+    user.lastLoginAt = user.lastSeenAt = now;
+
     setSession(res, user);
     return ok(res, serializeUser(user), "Login successful");
   } catch (err) {

@@ -22,6 +22,7 @@ const BookingListPage = lazy(() => import("@/pages/bookings/BookingList"));
 const UserListPage = lazy(() => import("@/pages/users/UserList"));
 const SiteListPage = lazy(() => import("@/pages/sites/SiteList"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
+const HelpPage = lazy(() => import("@/pages/help/HelpPage"));
 const SiteContentPage = lazy(() => import("@/pages/siteContent/SiteContent"));
 const TrustedRentersPage = lazy(() => import("@/pages/trustedRenters/TrustedRenters"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -53,6 +54,10 @@ export default function App() {
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
+
+                  {/* Opens in its own tab from the sidebar; staff only, like the rest of the admin. */}
+                  <Route path="/help" element={<Navigate to="/help/access-model" replace />} />
+                  <Route path="/help/:topic" element={<AdminRoute><HelpPage /></AdminRoute>} />
 
                   <Route element={<AdminRoute><AppShell /></AdminRoute>}>
                     <Route index element={<DashboardPage />} />

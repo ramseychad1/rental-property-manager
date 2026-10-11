@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Access Model - Rental Property Manager</title>
+<style>
+  :root {
+    --bg:#f7f6f3; --card:#fff; --ink:#1d1f23; --muted:#5f6670; --line:#dcdad3;
+    --super:#7c3aed; --site:#2563eb; --owner:#0f766e; --guest:#b45309; --anon:#64748b;
+    --yes:#15803d; --no:#b91c1c; --scoped:#b45309;
+  }
+  :root[data-theme="dark"] {
+    --bg:#14161a; --card:#1e2127; --ink:#eceae4; --muted:#9aa1ab; --line:#33373f;
+    --super:#a78bfa; --owner:#2dd4bf; --guest:#fbbf24; --anon:#94a3b8; --site:#60a5fa;
+    --yes:#4ade80; --no:#f87171; --scoped:#fbbf24;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      --bg:#14161a; --card:#1e2127; --ink:#eceae4; --muted:#9aa1ab; --line:#33373f;
+      --super:#a78bfa; --owner:#2dd4bf; --guest:#fbbf24; --anon:#94a3b8; --site:#60a5fa;
+      --yes:#4ade80; --no:#f87171; --scoped:#fbbf24;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif; }
+  main { max-width:1040px; margin:0 auto; padding:8px 4px 48px; }
+  h1 { font-size:28px; margin:0 0 4px; }
+  h2 { font-size:20px; margin:44px 0 12px; padding-top:8px; border-top:1px solid var(--line); }
+  h3 { margin:0 0 6px; font-size:17px; }
+  p.lead { color:var(--muted); margin:0 0 8px; }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; border-top-width:4px; }
+  .card ul { margin:8px 0 0; padding-left:18px; }
+  .card li { margin:3px 0; }
+  .tag { display:inline-block; font:600 11px/1 ui-monospace,monospace; padding:3px 6px; border-radius:4px; background:var(--line); color:var(--muted); margin-bottom:8px; }
+  .c-super{border-top-color:var(--super)} .c-site{border-top-color:var(--site)} .c-owner{border-top-color:var(--owner)} .c-guest{border-top-color:var(--guest)} .c-anon{border-top-color:var(--anon)}
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:14px; }
+  th,td { padding:9px 10px; border-bottom:1px solid var(--line); text-align:center; vertical-align:top; }
+  th:first-child,td:first-child { text-align:left; }
+  thead th { background:var(--bg); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  tr.group td { background:var(--bg); font-weight:700; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .y{color:var(--yes);font-weight:700} .n{color:var(--no)} .s{color:var(--scoped);font-weight:700}
+  td small { display:block; color:var(--muted); font-weight:400; }
+  .scroll { overflow-x:auto; }
+  .legend { font-size:13px; color:var(--muted); margin:8px 0 12px; }
+  /* tree */
+  .tree { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; font-size:14px; }
+  .node { border:1px solid var(--line); border-left-width:4px; border-radius:8px; padding:10px 12px; margin:8px 0; background:var(--bg); }
+  .node.super{border-left-color:var(--super)} .node.site{border-left-color:var(--site)} .node.owner{border-left-color:var(--owner)} .node.guest{border-left-color:var(--guest)}
+  .kids { margin-left:26px; padding-left:14px; border-left:2px dashed var(--line); }
+  .note { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--scoped); border-radius:8px; padding:12px 14px; margin:12px 0; }
+  code { font:13px ui-monospace,monospace; background:var(--line); padding:1px 5px; border-radius:4px; }
+  ol.steps li { margin:5px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Access Model</h1>
+  <p class="lead">Who can do what, and in which complex. A <b>complex</b> is one condo community with its own public website, properties, content and people. One deployment serves many complexes.</p>
+
+  <h2>1. The roles at a glance</h2>
+  <div class="grid">
+    <div class="card c-anon">
+      <span class="tag">not signed in</span>
+      <h3>Visitor</h3>
+      Browses a complex's public site only.
+      <ul>
+        <li>Sees that complex's <b>active, non-private</b> properties</li>
+        <li>Sees its site content, Things To Do and seasons</li>
+        <li>Cannot book (booking requires an account)</li>
+      </ul>
+    </div>
+    <div class="card c-guest">
+      <span class="tag">role: Guest</span>
+      <h3>Guest / Renter</h3>
+      Self-signs up (emailed code) on one complex's site.
+      <ul>
+        <li>Requests bookings, sees <b>own</b> bookings and documents</li>
+        <li>Also sees <b>private</b> properties of an owner who invited them</li>
+        <li>Can sign in only on their own complex's website</li>
+        <li>Cannot enter the admin panel</li>
+      </ul>
+    </div>
+    <div class="card c-owner">
+      <span class="tag">role: Owner</span>
+      <h3>Owner</h3>
+      Created by a Site Admin or Super Admin. Staff, but scoped.
+      <ul>
+        <li>Admin panel for <b>only</b> properties where <code>ownerId</code> = them</li>
+        <li>Their properties' bookings, seasons, add-ons, payment terms, documents</li>
+        <li>Their own invites, trusted renters and Gmail connection</li>
+        <li>Anything else returns <b>404</b> (not 403), so other people's ids are never confirmed</li>
+      </ul>
+    </div>
+    <div class="card c-site">
+      <span class="tag">role: Site Admin</span>
+      <h3>Site Admin</h3>
+      Runs <b>one</b> complex. Created by a Super Admin.
+      <ul>
+        <li>Edits that complex's <b>Site Content</b> and <b>Things To Do</b></li>
+        <li>Adds, resets, deactivates and removes its <b>Owners</b> (can only create Owners)</li>
+        <li><b>Sees</b> every property and booking in the complex, but <b>changes</b> only ones they own; booking decisions stay with the property's Owner</li>
+        <li>No Complexes screen, no domains, cannot create Site Admins</li>
+        <li>Never sees another complex (404)</li>
+      </ul>
+    </div>
+    <div class="card c-super">
+      <span class="tag">role: SuperAdmin</span>
+      <h3>Super Admin</h3>
+      The platform operator (you and your team). Not tied to a complex.
+      <ul>
+        <li>Everything above, in <b>every</b> complex</li>
+        <li>Creates and renames complexes, assigns custom domains, makes Site Admins</li>
+        <li>Moves a person to another role or complex (Users &rarr; the person &rarr; role and complex)</li>
+        <li>Top-bar <b>complex switcher</b>: "All complexes" or one</li>
+        <li>Sees unassigned properties (<code>ownerId = null</code>)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">
+    <b>Where roles live:</b> Super Admin is a platform-level flag on the account. Guest, Owner and Site Admin are a person's <b>membership</b> in one complex. Today a person belongs to <b>one</b> complex, and every email address is unique across the whole platform.
+  </div>
+
+  <h2>2. Capability matrix</h2>
+  <p class="legend"><span class="y">&#10003;</span> allowed &nbsp; <span class="s">scoped</span> allowed only for own data or own complex &nbsp; <span class="n">&#10007;</span> denied</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Capability</th><th>Visitor</th><th>Guest</th><th>Owner</th><th>Site Admin</th><th>SuperAdmin</th></tr></thead>
+    <tbody>
+      <tr class="group"><td colspan="6">Public site</td></tr>
+      <tr><td>View public properties, content, Things To Do</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+      <tr><td>View private properties</td><td class="n">&#10007;</td><td class="s">if invited<small>active grant from that owner</small></td><td class="s">own</td><td class="s">complex's<small>in the admin panel</small></td><td class="y">&#10003;</td></tr>
+      <tr class="group"><td colspan="6">Bookings</td></tr>
+      <tr><td>Create a booking request</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+      <tr><td>View a booking</td><td class="n">&#10007;</td><td class="s">own</td><td class="s">own properties'</td><td class="s">whole complex</td><td class="y">&#10003;</td></tr>
+      <tr><td>List bookings, analytics</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own properties'</td><td class="s">whole complex</td><td class="y">&#10003;</td></tr>
+      <tr><td>Accept / reject / cancel, mark paid, installments, add-ons, signed copy, send document</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own properties'</td><td class="s">own properties' only<small>others: view only</small></td><td class="y">&#10003;</td></tr>
+      <tr class="group"><td colspan="6">Properties</td></tr>
+      <tr><td>View properties in admin</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own</td><td class="s">whole complex</td><td class="y">&#10003;</td></tr>
+      <tr><td>Create / edit / delete property, seasons, pricing, payment terms, agreement text</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own</td><td class="s">own<small>others: view only</small></td><td class="y">&#10003;</td></tr>
+      <tr class="group"><td colspan="6">Invites and trusted renters</td></tr>
+      <tr><td>Send / resend / revoke invites, revoke grants</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own</td><td class="s">own</td><td class="y">&#10003;<small>any owner's, or on their behalf</small></td></tr>
+      <tr><td>Claim an invite</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+      <tr class="group"><td colspan="6">Running a complex</td></tr>
+      <tr><td>Edit site content (homepage, brand, SEO, pages)</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own complex</td><td class="y">&#10003;<small>pick a complex first</small></td></tr>
+      <tr><td>Manage Things To Do</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own complex</td><td class="y">&#10003;<small>pick a complex first</small></td></tr>
+      <tr><td>Create Owners, reset passwords, deactivate / delete users</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own complex<small>Owners and Guests only</small></td><td class="y">&#10003;</td></tr>
+      <tr><td>Last login / last seen of users</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="s">own complex</td><td class="y">&#10003;</td></tr>
+      <tr class="group"><td colspan="6">Platform</td></tr>
+      <tr><td>Create / rename / deactivate complexes</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="y">&#10003;</td></tr>
+      <tr><td>Add custom domains to a complex</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="y">&#10003;</td></tr>
+      <tr><td>Create Site Admins / Super Admins, change someone's role or complex</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="y">&#10003;</td></tr>
+      <tr><td>Connect own Gmail for sending</td><td class="n">&#10007;</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;<small>also the system sender</small></td></tr>
+      <tr class="group"><td colspan="6">Own account</td></tr>
+      <tr><td>Update own profile / password</td><td class="n">&#10007;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>3. How scope flows: who belongs where</h2>
+  <p class="lead">Scope is a chain: Complex &rarr; Person (membership) &rarr; Property (<code>ownerId</code>) &rarr; Booking (via its property).</p>
+  <div class="tree">
+    <div class="node super"><b>Super Admin</b> &mdash; above every complex; creates complexes and their domains</div>
+    <div class="kids">
+      <div class="node"><b>Complex A</b> &nbsp;<code>Site</code> with domain(s), site content, Things To Do
+        <div class="kids">
+          <div class="node site"><b>Site Admin</b> &mdash; runs Complex A: content, Things To Do, Owners; sees all of A's properties and bookings</div>
+          <div class="node owner"><b>Owner A1</b>
+            <div class="kids">
+              <div class="node">Property 1 &nbsp;<code>ownerId = A1</code>
+                <div class="kids">
+                  <div class="node">Seasons, add-ons, payment terms, rental agreement</div>
+                  <div class="node guest">Bookings &rarr; made by Guests; Owner A1 manages them</div>
+                </div>
+              </div>
+              <div class="node">Property 2 (private) &nbsp;<code>isPrivate = true</code>
+                <div class="kids"><div class="node guest">Visible only to Guests holding an active grant from Owner A1</div></div>
+              </div>
+              <div class="node">A1's invites, grants, Gmail connection</div>
+            </div>
+          </div>
+          <div class="node owner"><b>Owner A2</b> &mdash; same shape; cannot see or touch Owner A1's properties (404)</div>
+        </div>
+      </div>
+      <div class="node"><b>Complex B</b> &mdash; fully separate: its own Site Admin, Owners, properties, content. Nothing in B is visible from A (404).</div>
+      <div class="node">Unassigned properties (<code>ownerId = null</code>) &mdash; Super Admin only</div>
+    </div>
+  </div>
+
+  <h2>4. Which website a visitor sees</h2>
+  <div class="grid">
+    <div class="card"><h3>By domain</h3>Each complex has its own domain(s). The address a visitor types decides which complex they see. A domain belongs to exactly one complex.</div>
+    <div class="card"><h3>Preview address</h3>Before a domain exists, <code>&lt;main address&gt;/c/&lt;short name&gt;</code> shows that complex (the link under "Preview site" in Site Content). It is a cookie-based preview, not the real address.</div>
+    <div class="card"><h3>Sign-in is per complex</h3>On a complex's domain only its own members (and Super Admins) can sign in. Anyone else gets the same message as a wrong password.</div>
+    <div class="card"><h3>Property visibility</h3>Inactive: hidden from everyone but those who manage it. Active + public: everyone. Active + private: its Owner, staff who manage it, and Guests with an active grant. The admin panel's list is the only "everything I manage" view; the role still decides authorization.</div>
+  </div>
+
+  <h2>5. Working in several complexes (Super Admin)</h2>
+  <ol class="steps">
+    <li>The top-bar switcher chooses <b>All complexes</b> or one complex. The choice is remembered in your browser.</li>
+    <li>Lists (properties, bookings, users) show everything on <b>All complexes</b>, or just the chosen complex.</li>
+    <li><b>Site Content</b> and <b>Things To Do</b> edit one complex's public site, so on "All complexes" they ask you to pick a complex first and show no fields. This stops edits landing on the wrong site.</li>
+    <li>"Editing &lt;complex&gt;" at the top of those screens shows where your changes go, with Preview site and Live site links.</li>
+    <li>Site Admins and Owners never see the switcher; they see their complex's name.</li>
+  </ol>
+
+  <h2>6. Account lifecycle rules</h2>
+  <ol class="steps">
+    <li><b>Guests</b> sign up themselves with an emailed 6-digit code, on one complex's website.</li>
+    <li><b>Owners</b> are never self-service: a Site Admin (for their complex) or a Super Admin creates them and gets a one-time temporary password plus login URL, built from that complex's own domain.</li>
+    <li><b>Site Admins</b> are created only by a Super Admin.</li>
+    <li>Created/reset accounts have <code>mustChangePassword</code>: the API blocks everything except changing the password until done.</li>
+    <li><code>isActive = false</code> blocks sign-in and ends existing sessions on the next request.</li>
+    <li>Sessions are a JWT in an httpOnly cookie; every request re-reads the user from the database, so role and deactivation changes apply immediately.</li>
+    <li>You cannot demote, deactivate or delete the <b>last active Super Admin</b>, and cannot change your own role.</li>
+    <li>A person belongs to one complex; every email address is unique across the platform.</li>
+  </ol>
+</main>
+</body>
+</html>

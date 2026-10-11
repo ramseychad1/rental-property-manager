@@ -8,6 +8,7 @@ import {
   UserCheck,
   Building2,
   LayoutTemplate,
+  CircleHelp,
 } from "lucide-react";
 import { vertical } from "@/config/vertical";
 
@@ -67,5 +68,13 @@ export const navConfig = [
     to: "/settings",
     icon: Settings,
     testid: "nav-settings",
+  },
+  // Opens in a new tab (staff only, like everything else here).
+  {
+    label: "Help",
+    to: "/help",
+    icon: CircleHelp,
+    newTab: true,
+    testid: "nav-help",
   },
 ];

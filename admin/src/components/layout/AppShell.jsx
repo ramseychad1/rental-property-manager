@@ -55,6 +55,17 @@ export default function AppShell() {
                     </NavLink>
                   ))}
                 </div>
+              ) : item.newTab ? (
+                <a
+                  key={item.to}
+                  href={item.to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid={`mobile-${item.testid}`}
+                  className="flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                >
+                  <item.icon className="w-5 h-5" /> {item.label}
+                </a>
               ) : (
                 <NavLink
                   key={item.to}

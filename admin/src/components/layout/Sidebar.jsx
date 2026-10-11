@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronDown, ChevronsLeft, ChevronsRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navConfig } from "@/config/nav";
 import { useAuth } from "@/contexts/AuthContext";
@@ -114,7 +114,25 @@ export default function Sidebar({ collapsed, onToggle }) {
         <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto scrollbar-thin">
           {navConfig.filter((item) => (isSuperAdmin || !item.superAdminOnly) && (isComplexAdmin || !item.complexAdminOnly)).map((item) => {
             if (item.children) return <NavGroup key={item.testid} item={item} collapsed={collapsed} />;
-            const link = (
+            const link = item.newTab ? (
+              <a key={item.to} href={item.to} target="_blank" rel="noopener noreferrer" data-testid={item.testid}>
+                <div
+                  className={cn(
+                    "group relative overflow-hidden flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium transition-colors",
+                    "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                    collapsed && "justify-center px-0",
+                  )}
+                >
+                  <item.icon className="w-[18px] h-[18px] shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1">{item.label}</span>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50" aria-label="opens in a new tab" />
+                    </>
+                  )}
+                </div>
+              </a>
+            ) : (
               <NavLink
                 key={item.to}
                 to={item.to}

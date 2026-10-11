@@ -441,13 +441,22 @@ export async function markInstallmentPaid(req, res, next) {
 
     const wasFirstPayment = paid && !booking.installments.some((i) => i.paid);
 
+    // Keep the booking's own paymentStatus (the Payment badge, list filter and
+    // revenue figures all read it) in step with the schedule: paid once every
+    // installment is, pending otherwise. A refunded booking stays refunded.
+    const allPaid = booking.installments.every((i) => (i.id === installment.id ? paid : i.paid));
+    const bookingUpdate = {
+      ...(wasFirstPayment && booking.bookingStatus === "accepted" ? { bookingStatus: "booked" } : {}),
+      ...(booking.paymentStatus !== "refunded" ? { paymentStatus: allPaid ? "paid" : "pending" } : {}),
+    };
+
     await prisma.$transaction([
       prisma.bookingInstallment.update({
         where: { id: installment.id },
         data: { paid, paidAt: paid ? new Date() : null },
       }),
-      ...(wasFirstPayment && booking.bookingStatus === "accepted"
-        ? [prisma.booking.update({ where: { id: booking.id }, data: { bookingStatus: "booked" } })]
+      ...(Object.keys(bookingUpdate).length
+        ? [prisma.booking.update({ where: { id: booking.id }, data: bookingUpdate })]
         : []),
     ]);
 

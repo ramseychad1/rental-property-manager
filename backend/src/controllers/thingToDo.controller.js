@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
 import { serializeThingToDo } from "../lib/serialize.js";
-import { isSuperAdmin, isSiteAdmin, reqSiteId } from "../lib/access.js";
+import { isSuperAdmin, isSiteAdmin, reqSiteId, requireTargetSite } from "../lib/access.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { unflatten } from "../middleware/upload.js";
 
@@ -78,6 +78,7 @@ export async function getThingToDo(req, res, next) {
 export async function createThingToDo(req, res, next) {
   try {
     const body = thingSchema.parse(unflatten(req.body));
+    await requireTargetSite(req);
     const image = req.file ? await saveFile(req.file) : null;
 
     const item = await prisma.thingToDo.create({

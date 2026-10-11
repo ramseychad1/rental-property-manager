@@ -14,6 +14,14 @@ export const isStaff = (u) => isSuperAdmin(u) || ["Owner", "SiteAdmin"].includes
 // The complex a request is for: the signed-in user's, else the resolved host's.
 export const reqSiteId = (req) => (req.user ? req.user.siteId : (req.site?.id ?? null));
 
+// Content writes must name one complex. A Super Admin working on "All
+// complexes" has no target, so refuse instead of silently editing the default
+// (with a single complex there's nothing to confuse, so that case is allowed).
+export async function requireTargetSite(req) {
+  if (!isSuperAdmin(req.user) || req.user.siteId) return;
+  if ((await prisma.site.count()) > 1) throw new ApiError("Pick a complex first (top bar) before editing.", 400);
+}
+
 const siteWhere = (u) => (u?.siteId ? { siteId: u.siteId } : {});
 
 // Prisma `where` fragment limiting properties a user may *see* in the admin

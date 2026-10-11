@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { ok, ApiError } from "../lib/response.js";
+import { requireTargetSite } from "../lib/access.js";
 import { saveFile } from "../lib/storage.js";
 import { SECTIONS, SECTION_SCHEMAS, SECTION_DEFAULTS } from "../lib/siteContent.js";
 
@@ -32,6 +33,7 @@ export async function saveSection(req, res, next) {
   try {
     const section = sectionOr404(req.params.section);
     const data = SECTION_SCHEMAS[section].parse(req.body);
+    await requireTargetSite(req);
     const site = getSite(req);
     await prisma.siteContent.upsert({
       where: { siteId_section: { siteId: site.id, section } },
@@ -47,6 +49,7 @@ export async function saveSection(req, res, next) {
 export async function resetSection(req, res, next) {
   try {
     const section = sectionOr404(req.params.section);
+    await requireTargetSite(req);
     const site = getSite(req);
     await prisma.siteContent.deleteMany({ where: { siteId: site.id, section } });
     return ok(res, SECTION_DEFAULTS[section], "Section reset to defaults");
@@ -57,6 +60,7 @@ export async function resetSection(req, res, next) {
 
 export async function uploadImage(req, res, next) {
   try {
+    await requireTargetSite(req);
     if (!req.file) throw new ApiError("No image uploaded.", 400);
     if (!req.file.mimetype.startsWith("image/")) throw new ApiError("Only image files are allowed.", 400);
     const { url } = await saveFile(req.file);

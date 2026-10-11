@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const ALL = "__all__";
 
 // Super Admin: pick which complex the console works on ("All complexes" lists
-// everything; edits then go to the default complex). Everyone else: just see
+// everything; screens that edit a site ask you to pick one). Everyone else: just see
 // which complex they belong to.
 export default function ComplexSwitcher() {
   const { isSuperAdmin } = useAuth();

@@ -3,7 +3,7 @@ import { Building2, ExternalLink } from "lucide-react";
 import { sitesApi } from "@/lib/api";
 
 // Shown above screens whose edits land on one complex's public site, so it's
-// always clear which one (a Super Admin on "All complexes" edits the default).
+// always clear which one (RequireComplex stops "All complexes" from reaching them).
 export default function ActiveComplexNotice() {
   const { data } = useQuery({ queryKey: ["site-current"], queryFn: sitesApi.current });
   if (!data?.name) return null;

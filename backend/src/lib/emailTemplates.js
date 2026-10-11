@@ -133,10 +133,13 @@ function paymentScheduleRows(installments) {
   return rows;
 }
 
-export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
+export function guestBookingEmail(event, b, p, { ownerName, siteUrl, installment } = {}) {
   const who = esc(b.guestName);
   const contact = ownerName ? ` If you have questions, just reply to this email.` : "";
   const scheduleRows = event === "accepted" || event === "paid" ? paymentScheduleRows(b.installments) : [];
+  // Which payment this receipt is for (set when an installment is marked paid).
+  const receivedRow =
+    event === "paid" && installment ? [["Payment received", `${installment.label} - ${money(installment.amount)}`]] : [];
   // Only meaningful for "paid" - whether anything on the schedule is still
   // outstanding, to pick between "here's what's still due" and "fully paid".
   const scheduleRemaining = (b.installments || []).some((i) => !i.paid);
@@ -195,7 +198,7 @@ export function guestBookingEmail(event, b, p, { ownerName, siteUrl } = {}) {
     ...layout({
       heading: copy.heading,
       intro: copy.intro,
-      rows: [...stayRows(b, p), ...priceRows(b), ["Booking ID", b.bookingId], ...scheduleRows],
+      rows: [...stayRows(b, p), ...priceRows(b), ["Booking ID", b.bookingId], ...receivedRow, ...scheduleRows],
       cta,
       outro,
     }),

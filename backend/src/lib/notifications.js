@@ -42,11 +42,11 @@ export async function notifyBookingCreated(booking) {
 }
 
 // event: accepted | rejected | cancelled | paid | refunded
-export async function notifyBookingEvent(event, booking, { attachments } = {}) {
+export async function notifyBookingEvent(event, booking, { attachments, installment } = {}) {
   try {
     const p = booking.property;
     const owner = await ownerOf(p);
-    const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name, siteUrl: await siteOrigin(p.siteId) });
+    const mail = guestBookingEmail(event, booking, p, { ownerName: owner?.name, siteUrl: await siteOrigin(p.siteId), installment });
     await sendMail({
       kind: `booking-${event}`, to: booking.guestEmail, ...mail,
       ownerId: p.ownerId, replyTo: owner?.email, bookingId: booking.id, attachments,

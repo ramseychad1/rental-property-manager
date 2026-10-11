@@ -456,7 +456,9 @@ export async function markInstallmentPaid(req, res, next) {
       include: { property: true, user: true, installments: { orderBy: { order: "asc" } } },
     });
 
-    if (wasFirstPayment) void notifyBookingEvent("paid", updated);
+    // Every installment marked paid gets the renter a receipt (the email itself
+    // says whether more is due or the schedule is fully paid). Un-marking sends nothing.
+    if (paid) void notifyBookingEvent("paid", updated, { installment: updated.installments.find((i) => i.id === installment.id) });
 
     return ok(res, serializeBooking(updated), "Payment updated");
   } catch (err) {

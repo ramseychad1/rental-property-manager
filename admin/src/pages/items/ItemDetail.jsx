@@ -9,7 +9,6 @@ import {
   Users as UsersIcon,
   Pencil,
   Trash2,
-  Plus,
   CalendarDays,
   Loader2,
   ChevronLeft,
@@ -22,290 +21,14 @@ import StatusBadge from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { itemsApi, pricingApi } from "@/lib/api";
+import { itemsApi } from "@/lib/api";
 import { queryKeys } from "@/lib/queryClient";
 import { vertical } from "@/config/vertical";
 import { fmtCurrency, fmtDate } from "@/lib/formatters";
 import { toast } from "sonner";
 import { getEmbedUrl } from "../../lib/formatters";
-import WeekdaySelect, { weekdayRule } from "@/components/forms/WeekdaySelect";
-import MonthDayPicker from "@/components/forms/MonthDayPicker";
-import { formatMonthDay, normalizeMD } from "@/lib/seasonRange";
-
-function PricingDialog({
-  open,
-  onOpenChange,
-  propertyId,
-  initial,
-  onSaved,
-  existingSeasons = [],
-}) {
-  const [form, setForm] = useState(
-    initial || {
-      name: "",
-      pricePerNight: 100,
-      minNights: "",
-      maxNights: "",
-      checkInDay: null,
-      checkOutDay: null,
-      dateRanges: [{ startDate: "", endDate: "" }],
-    },
-  );
-  const [overlapConflicts, setOverlapConflicts] = useState(null); // { conflictingSeasons: [...] }
-
-  // Seasons repeat yearly, so compare month/day only. Day-of-year on a leap
-  // year (2000) gives each "MM-DD" a stable number; a range whose end is
-  // before its start wraps over New Year and is split in two.
-  const dayOfYear = (md) => {
-    const [m, d] = normalizeMD(md).split("-").map(Number);
-    return Math.round((Date.UTC(2000, m - 1, d) - Date.UTC(2000, 0, 1)) / 86_400_000) + 1;
-  };
-  const spans = (start, end) => {
-    const s = dayOfYear(start);
-    const e = dayOfYear(end);
-    return s <= e ? [[s, e]] : [[s, 366], [1, e]];
-  };
-  const datesOverlap = (startA, endA, startB, endB) =>
-    spans(startA, endA).some(([a1, a2]) =>
-      spans(startB, endB).some(([b1, b2]) => a1 <= b2 && a2 >= b1),
-    );
-
-  // Find all existing seasons that overlap with the form's date range
-  const findConflicts = () => {
-    const { startDate, endDate } = form.dateRanges[0];
-    if (!startDate || !endDate) return [];
-
-    return existingSeasons.filter((season) => {
-      // Skip the season being edited
-      if (initial?._id && season._id === initial._id) return false;
-
-      return (season.dateRanges || []).some((range) =>
-        datesOverlap(startDate, endDate, range.startDate, range.endDate),
-      );
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (
-      !form.name ||
-      !form.dateRanges[0].startDate ||
-      !form.dateRanges[0].endDate
-    ) {
-      toast.error("Name and at least one date range are required");
-      return;
-    }
-
-    // Check for overlapping seasons
-    const conflicts = findConflicts();
-    if (conflicts.length > 0) {
-      setOverlapConflicts(conflicts);
-      return; // Stop here — wait for user confirmation
-    }
-
-    await doSave();
-  };
-
-  const doSave = async () => {
-    const payload = {
-      ...form,
-      pricePerNight: Number(form.pricePerNight),
-      // Blank = no season-specific limit (falls back to the property's minimum).
-      minNights: form.minNights === "" || form.minNights == null ? null : Number(form.minNights),
-      maxNights: form.maxNights === "" || form.maxNights == null ? null : Number(form.maxNights),
-      checkInDay: form.checkInDay ?? null,
-      checkOutDay: form.checkOutDay ?? null,
-    };
-    try {
-      if (initial?._id) {
-        await pricingApi.update(initial._id, propertyId, payload);
-        toast.success(`${vertical.copy.pricingRule} updated`);
-      } else {
-        await pricingApi.create(propertyId, payload);
-        toast.success(`${vertical.copy.pricingRule} created`);
-      }
-      onOpenChange(false);
-      onSaved?.();
-    } catch (err) {
-      toast.error(err?.normalizedMessage || "Failed to save");
-    }
-  };
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent data-testid="pricing-dialog" className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {initial
-                ? `Edit ${vertical.copy.pricingRule}`
-                : `Add ${vertical.copy.pricingRule}`}
-            </DialogTitle>
-            <DialogDescription>
-              Define a date window and per-night price for this{" "}
-              {vertical.item.singular.toLowerCase()}.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                data-testid="pricing-form-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Summer High"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Starts</Label>
-                <MonthDayPicker
-                  testid="pricing-form-start"
-                  value={form.dateRanges[0].startDate}
-                  onChange={(v) =>
-                    setForm({ ...form, dateRanges: [{ ...form.dateRanges[0], startDate: v }] })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Ends (inclusive)</Label>
-                <MonthDayPicker
-                  testid="pricing-form-end"
-                  value={form.dateRanges[0].endDate}
-                  onChange={(v) =>
-                    setForm({ ...form, dateRanges: [{ ...form.dateRanges[0], endDate: v }] })
-                  }
-                />
-              </div>
-              <p className="col-span-2 text-xs text-muted-foreground">
-                Repeats every year. To cover New Year, set the end before the start
-                (e.g. Dec 15 to Jan 5).
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label>Price / night</Label>
-                <Input
-                  data-testid="pricing-form-price"
-                  type="number"
-                  value={form.pricePerNight}
-                  onChange={(e) =>
-                    setForm({ ...form, pricePerNight: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Min nights</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="Property default"
-                  value={form.minNights ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, minNights: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Max nights</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="No limit"
-                  value={form.maxNights ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, maxNights: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Check-in day</Label>
-                <WeekdaySelect
-                  testid="pricing-form-checkin-day"
-                  value={form.checkInDay}
-                  onChange={(v) => setForm({ ...form, checkInDay: v })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Check-out day</Label>
-                <WeekdaySelect
-                  testid="pricing-form-checkout-day"
-                  value={form.checkOutDay}
-                  onChange={(v) => setForm({ ...form, checkOutDay: v })}
-                />
-              </div>
-              <p className="col-span-2 text-xs text-muted-foreground">
-                Optional. Choose Saturday for both to require Saturday-to-Saturday
-                stays. Applies to stays that start in this {vertical.copy.pricingRule.toLowerCase()}.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" data-testid="pricing-form-submit">
-                {initial ? "Save changes" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Overlap Conflict Confirmation Dialog */}
-      <ConfirmDialog
-        open={!!overlapConflicts}
-        onOpenChange={(v) => !v && setOverlapConflicts(null)}
-        title="Date overlap detected"
-        description={
-          overlapConflicts
-            ? `The selected dates overlap with the following existing ${vertical.copy.pricingRules.toLowerCase()}:\n\n${overlapConflicts
-                .map(
-                  (s) =>
-                    `• "${s.name}" (${s.dateRanges
-                      ?.map(
-                        (r) =>
-                          `${formatMonthDay(r.startDate)} → ${formatMonthDay(r.endDate)}`,
-                      )
-                      .join(", ")})`,
-                )
-                .join("\n")}\n\nDo you want to proceed anyway?`
-            : ""
-        }
-        confirmLabel="Yes, proceed"
-        onConfirm={async () => {
-          setOverlapConflicts(null);
-          await doSave();
-        }}
-      />
-    </>
-  );
-}
+import SeasonalPricing from "@/components/forms/SeasonalPricing";
 
 export default function ItemDetailPage() {
   const { id } = useParams();
@@ -313,20 +36,12 @@ export default function ItemDetailPage() {
   const qc = useQueryClient();
   const [confirmDel, setConfirmDel] = useState(false);
   const [active, setActive] = useState(0);
-  const [pricingDialog, setPricingDialog] = useState(false);
-  const [editingRule, setEditingRule] = useState(null);
-  const [pendingRuleDel, setPendingRuleDel] = useState(null);
 
   const { data: item, isLoading } = useQuery({
     queryKey: queryKeys.item(id),
     queryFn: () => itemsApi.get(id),
   });
 
-  const seasons = useQuery({
-    queryKey: queryKeys.pricing(id),
-    queryFn: () => pricingApi.list(id),
-    enabled: !!id,
-  });
   const bookedDates = useQuery({
     queryKey: queryKeys.bookedDates(id),
     queryFn: () => itemsApi.bookedDates(id),
@@ -473,107 +188,8 @@ export default function ItemDetailPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="pricing" className="mt-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Per-night pricing windows that override the base rate.
-                </p>
-                <Button
-                  data-testid="pricing-add-btn"
-                  size="sm"
-                  onClick={() => {
-                    setEditingRule(null);
-                    setPricingDialog(true);
-                  }}
-                >
-                  <Plus className="w-4 h-4" /> Add {vertical.copy.pricingRule}
-                </Button>
-              </div>
-              <Card className="rounded-xl overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="overline">Name</TableHead>
-                      <TableHead className="overline">Window</TableHead>
-                      <TableHead className="overline">Price</TableHead>
-                      <TableHead className="overline">Nights</TableHead>
-                      <TableHead className="overline text-right">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(seasons.data || []).map((s) => (
-                      <TableRow
-                        key={s._id}
-                        data-testid={`pricing-row-${s._id}`}
-                      >
-                        <TableCell className="font-semibold">
-                          {s.name}
-                        </TableCell>
-                        {/* <TableCell className="font-mono text-xs text-muted-foreground">
-                          {fmtDate(s.dateRanges?.[0]?.startDate)} → {fmtDate(s.dateRanges?.[0]?.endDate)}
-                        </TableCell> */}
-
-                        <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                          {s.dateRanges?.map((range, i) => (
-                            <div key={i} className="mt-2">
-                              {formatMonthDay(range.startDate)} →{" "}
-                              {formatMonthDay(range.endDate)}
-                              <span className="text-muted-foreground/70"> · every year</span>
-                            </div>
-                          ))}
-                        </TableCell>
-
-                        <TableCell className="font-mono font-semibold">
-                          {fmtCurrency(s.pricePerNight)}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {s.minNights ?? "default"} – {s.maxNights ?? "no limit"}
-                          {weekdayRule(s) && (
-                            <div className="text-muted-foreground mt-1">{weekdayRule(s)}</div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              data-testid={`pricing-edit-${s._id}`}
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingRule(s);
-                                setPricingDialog(true);
-                              }}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              data-testid={`pricing-delete-${s._id}`}
-                              size="icon"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setPendingRuleDel(s)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(seasons.data || []).length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className="py-12 text-center text-sm text-muted-foreground"
-                        >
-                          No {vertical.copy.pricingRules.toLowerCase()}{" "}
-                          configured.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
+            <TabsContent value="pricing" className="mt-4">
+              <SeasonalPricing propertyId={id} readOnly editHref={`/${vertical.item.slug}/${id}/edit#seasonal-pricing`} />
             </TabsContent>
             <TabsContent value="calendar" className="mt-4">
               <Card className="p-6 rounded-xl">
@@ -710,20 +326,6 @@ export default function ItemDetailPage() {
         </div>
       </div>
 
-      {pricingDialog && (
-        <PricingDialog
-          key={editingRule?._id || "new"}
-          open={pricingDialog}
-          onOpenChange={setPricingDialog}
-          propertyId={id}
-          initial={editingRule}
-          existingSeasons={seasons.data || []}
-          onSaved={() =>
-            qc.invalidateQueries({ queryKey: queryKeys.pricing(id) })
-          }
-        />
-      )}
-
       <ConfirmDialog
         open={confirmDel}
         onOpenChange={setConfirmDel}
@@ -732,22 +334,6 @@ export default function ItemDetailPage() {
         destructive
         confirmLabel="Delete"
         onConfirm={() => remove.mutate()}
-      />
-
-      <ConfirmDialog
-        open={!!pendingRuleDel}
-        onOpenChange={(v) => !v && setPendingRuleDel(null)}
-        title={`Delete ${vertical.copy.pricingRule.toLowerCase()}?`}
-        destructive
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (pendingRuleDel) {
-            await pricingApi.remove(pendingRuleDel._id, id);
-            qc.invalidateQueries({ queryKey: queryKeys.pricing(id) });
-            toast.success(`${vertical.copy.pricingRule} deleted`);
-            setPendingRuleDel(null);
-          }
-        }}
       />
     </div>
   );

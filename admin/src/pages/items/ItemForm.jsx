@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PaymentScheduleFields, { newTerm } from "@/components/forms/PaymentScheduleFields";
 import AddOnsFields from "@/components/forms/AddOnsFields";
+import SeasonalPricing from "@/components/forms/SeasonalPricing";
 import {
   Select,
   SelectContent,
@@ -76,6 +77,14 @@ export default function ItemFormPage({ mode = "create" }) {
     queryFn: () => itemsApi.get(id),
     enabled: !!id,
   });
+
+  // "Edit pricing" on the overview links here (#seasonal-pricing).
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === "#seasonal-pricing" && !isLoading) {
+      document.getElementById("seasonal-pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [hash, isLoading]);
 
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState(null);
@@ -444,6 +453,21 @@ export default function ItemFormPage({ mode = "create" }) {
                 )}
               </div>
             </div>
+          </Card>
+
+          {/* Seasonal pricing: its own records, saved as you go (not by the form's Save) */}
+          <Card id="seasonal-pricing" className="p-6 rounded-xl space-y-4 scroll-mt-24">
+            <div>
+              <span className="overline">Pricing</span>
+              <h3 className="font-display text-lg font-semibold">Seasonal pricing</h3>
+            </div>
+            {mode === "edit" && id ? (
+              <SeasonalPricing propertyId={id} />
+            ) : (
+              <p className="text-sm text-muted-foreground" data-testid="seasonal-pricing-save-first">
+                Save the property first, then come back to Edit to add seasonal pricing.
+              </p>
+            )}
           </Card>
 
           {/* Payment schedule */}

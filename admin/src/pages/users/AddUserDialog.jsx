@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sitesApi, usersApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const EMPTY = { name: "", email: "", role: "Owner", siteId: "" };
 
@@ -22,8 +23,10 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
-  const { data: sites = [] } = useQuery({ queryKey: ["sites"], queryFn: sitesApi.list, enabled: open });
-  const needsComplex = form.role !== "SuperAdmin";
+  const { isSuperAdmin } = useAuth();
+  const { data: sites = [] } = useQuery({ queryKey: ["sites"], queryFn: sitesApi.list, enabled: open && isSuperAdmin });
+  // A Site Admin always adds people to their own complex, and only as Owners.
+  const needsComplex = isSuperAdmin && form.role !== "SuperAdmin";
   const siteId = form.siteId || sites[0]?._id || "";
 
   const close = (v) => {
@@ -72,8 +75,12 @@ export default function AddUserDialog({ open, onOpenChange, onCreated }) {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Owner">Owner — manages only their own properties</SelectItem>
-                <SelectItem value="SiteAdmin">Site Admin — runs one complex's content and owners</SelectItem>
-                <SelectItem value="SuperAdmin">Super Admin — full access to everything</SelectItem>
+                {isSuperAdmin && (
+                  <>
+                    <SelectItem value="SiteAdmin">Site Admin — runs one complex's content and owners</SelectItem>
+                    <SelectItem value="SuperAdmin">Super Admin — full access to everything</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

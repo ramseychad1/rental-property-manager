@@ -35,6 +35,13 @@ export function AdminRoute({ children }) {
   return children;
 }
 
+/** Screens for whoever runs a complex: its Site Admin, or a Super Admin. */
+export function ComplexAdminRoute({ children }) {
+  const { isComplexAdmin } = useAuth();
+  if (!isComplexAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
 /** Platform-operator-only screens (Site Content, Users, ...). */
 export function SuperAdminRoute({ children }) {
   const { isSuperAdmin } = useAuth();

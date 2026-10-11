@@ -86,7 +86,7 @@ function NavGroup({ item, collapsed }) {
 }
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isComplexAdmin } = useAuth();
   return (
     <aside
       data-testid="app-sidebar"
@@ -112,7 +112,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Nav */}
       <TooltipProvider delayDuration={0}>
         <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto scrollbar-thin">
-          {navConfig.filter((item) => isSuperAdmin || !item.superAdminOnly).map((item) => {
+          {navConfig.filter((item) => (isSuperAdmin || !item.superAdminOnly) && (isComplexAdmin || !item.complexAdminOnly)).map((item) => {
             if (item.children) return <NavGroup key={item.testid} item={item} collapsed={collapsed} />;
             const link = (
               <NavLink

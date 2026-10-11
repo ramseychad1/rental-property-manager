@@ -8,11 +8,12 @@ import {
   userBookings,
   createUser,
   updateUser,
+  setUserScope,
   resetUserPassword,
   emailCredentials,
   deleteUser,
 } from "../controllers/user.controller.js";
-import { requireAuth, requireSiteAdmin } from "../middleware/auth.js";
+import { requireAuth, requireSiteAdmin, requireSuperAdmin } from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
 
 const router = Router();
@@ -23,6 +24,7 @@ router.post("/updateProfile", requireAuth, upload.single("picture"), updateProfi
 router.patch("/updatePassword", requireAuth, updatePassword);
 router.get("/all-users", requireSiteAdmin, listAllUsers);
 router.post("/", requireSiteAdmin, createUser);
+router.patch("/:userId/scope", requireSuperAdmin, setUserScope);
 router.patch("/:userId", requireSiteAdmin, updateUser);
 router.delete("/:userId", requireSiteAdmin, deleteUser);
 router.post("/:userId/reset-password", requireSiteAdmin, resetUserPassword);

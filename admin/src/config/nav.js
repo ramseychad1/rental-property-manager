@@ -40,7 +40,7 @@ export const navConfig = [
   // A group: expands in the sidebar to show its children.
   {
     label: "Site Content",
-    superAdminOnly: true,
+    complexAdminOnly: true,
     icon: LayoutTemplate,
     testid: "nav-site-content",
     children: [
@@ -57,7 +57,7 @@ export const navConfig = [
   },
   {
     label: "Users",
-    superAdminOnly: true,
+    complexAdminOnly: true,
     to: "/users",
     icon: Users,
     testid: "nav-users",

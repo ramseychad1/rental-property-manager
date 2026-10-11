@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import ComplexSwitcher from "@/components/layout/ComplexSwitcher";
 
 export default function Topbar({ onMobileMenu }) {
   const { theme, toggleTheme } = useTheme();
@@ -50,6 +51,8 @@ export default function Topbar({ onMobileMenu }) {
         </button>
 
         <div className="flex-1" />
+
+        <ComplexSwitcher />
 
         <Button
           data-testid="topbar-theme-toggle"

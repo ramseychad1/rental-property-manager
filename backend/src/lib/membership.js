@@ -12,16 +12,12 @@ export function membershipCreate(site, role) {
   return { memberships: { create: { siteId: site.id, role } } };
 }
 
-// Keeps a user's membership in step with User.role. The app allows one
-// membership per user for now (the multi-complex switcher will lift this), so
-// this replaces whatever is there.
-// A user who already belongs to a complex stays in it; otherwise `siteId`, else
-// the default complex.
-export async function syncMembership(client, userId, role, siteId) {
-  const existing = await client.siteMembership.findFirst({ where: { userId } });
-  const targetSiteId = existing?.siteId ?? siteId ?? (await getDefaultSite(client)).id;
+// Gives a user exactly this role in exactly this complex (the app allows one
+// membership per user for now, so any other is dropped). SuperAdmin is
+// platform-level and has none.
+export async function replaceMembership(client, userId, role, siteId) {
   await client.siteMembership.deleteMany({ where: { userId } });
   if (role !== "SuperAdmin") {
-    await client.siteMembership.create({ data: { userId, siteId: targetSiteId, role } });
+    await client.siteMembership.create({ data: { userId, siteId, role } });
   }
 }

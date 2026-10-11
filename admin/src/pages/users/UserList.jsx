@@ -40,6 +40,7 @@ import { queryKeys } from "@/lib/queryClient";
 import { fmtDate, fmtRelative } from "@/lib/formatters";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import UserBookings from "./UserBookings";
+import ScopeEditor from "./ScopeEditor";
 import AddUserDialog from "./AddUserDialog";
 import CredentialsDialog from "./CredentialsDialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -57,7 +58,7 @@ export default function UserListPage() {
   const [page, setPage] = useState(1);
 
   const debouncedSearch = useDebouncedValue(search);
-  const { user: me } = useAuth();
+  const { user: me, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [creds, setCreds] = useState(null); // { credentials, name, reset }
@@ -388,6 +389,16 @@ export default function UserListPage() {
                     </p>
                   )}
                 </Card>
+              )}
+
+              {isSuperAdmin && STAFF.includes(active.role) && active.id !== me?.id && (
+                <ScopeEditor
+                  user={active}
+                  onChanged={(updated) => {
+                    setActive(updated);
+                    refreshUsers();
+                  }}
+                />
               )}
 
               {active.id !== me?.id && (

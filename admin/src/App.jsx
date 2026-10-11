@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AdminRoute, SuperAdminRoute } from "@/router/ProtectedRoute";
+import { AdminRoute, SuperAdminRoute, ComplexAdminRoute } from "@/router/ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import { vertical } from "@/config/vertical";
@@ -61,7 +61,7 @@ export default function App() {
                       <Route path=":id" element={<ItemDetailPage />} />
                       <Route path=":id/edit" element={<ItemFormPage mode="edit" />} />
                     </Route>
-                    <Route path="things-to-do" element={<SuperAdminRoute><Outlet /></SuperAdminRoute>}>
+                    <Route path="things-to-do" element={<ComplexAdminRoute><Outlet /></ComplexAdminRoute>}>
                       <Route index element={<ThingsToDoList />} />
                       <Route path="new" element={<ThingsToDoForm mode="create" />} />
                       <Route path=":id" element={<ThingsToDoDetail />} />
@@ -70,9 +70,9 @@ export default function App() {
                     <Route path="trusted-renters" element={<TrustedRentersPage />} />
                     <Route path="bookings" element={<BookingListPage />} />
                     <Route path="pricing" element={<Navigate to={`/${vertical.item.slug}`} replace />} />
-                    <Route path="users" element={<SuperAdminRoute><UserListPage /></SuperAdminRoute>} />
+                    <Route path="users" element={<ComplexAdminRoute><UserListPage /></ComplexAdminRoute>} />
                     <Route path="complexes" element={<SuperAdminRoute><SiteListPage /></SuperAdminRoute>} />
-                    <Route path="site-content" element={<SuperAdminRoute><SiteContentPage /></SuperAdminRoute>} />
+                    <Route path="site-content" element={<ComplexAdminRoute><SiteContentPage /></ComplexAdminRoute>} />
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>
 

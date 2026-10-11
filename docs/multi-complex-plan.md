@@ -127,6 +127,14 @@ Route changes:
 - **Migrating today's "SuperAdmin" team members:** after Phase 1 everyone currently SuperAdmin stays SuperAdmin (the backfill only creates memberships for non-SuperAdmins), so nothing changes silently. Once Phase 5 ships, Chad keeps his own account as SuperAdmin and uses the scope editor to move the others to SiteAdmin in the right complex (the self-change block means someone else must demote him if he ever wants that).
 - Site Content and Things To Do pages work unchanged, scoped by the user's membership site.
 
+**Phase 5 status: BUILT locally 2026-10-11, not committed or deployed.** What exists:
+- **Scope editor** (`PATCH /api/user/:id/scope`, SuperAdmin only; card on the user detail sheet): sets role (Owner / Site Admin / Super Admin) and complex in one transaction, replacing the single membership. Refused for yourself, for Guests, without a complex, and when the person owns properties in a different complex. The generic user update no longer accepts `role`.
+- **Last-SuperAdmin guard:** demote, deactivate and delete run inside a transaction behind a Postgres advisory lock, so two Super Admins removing each other at the same moment can't empty the platform (a test races them; it fails without the lock). Because the actor is always an active Super Admin and can't target themselves, the guard only ever matters in that race.
+- **Site Admin can sign in to the admin panel.** Site Content, Things To Do and Users screens open to Site Admin and Super Admin; Complexes stays Super Admin only. A Site Admin adding a user sees Owner only and no complex picker.
+- **Complex switcher** in the top bar: a Super Admin picks a complex (sent as `X-Site-Id`, persisted in localStorage; "All complexes" lists everything); other staff see their complex's name. Site Content and Things To Do show an "Editing <complex>" line, since a Super Admin on "All complexes" edits the default one.
+- Tests: `tests/scope.test.js`; `npm test` now runs 20 serially (`--test-concurrency=1`, because the files share one local database).
+- Known rough edges: a Site Admin still sees edit links on other owners' properties (the API refuses them with 404); not browser-tested (see status note).
+
 ## Phase 6 - Verification
 
 - Automated cross-complex tests (none exist in the repo today, so this adds the harness): for each resource, a user in complex A requesting complex B's id gets 404 on read, update, delete, list and count; guest cookie from A is rejected on B; SSR renders the right complex for each host.

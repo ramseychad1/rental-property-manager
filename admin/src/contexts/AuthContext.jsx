@@ -13,6 +13,8 @@ const AuthContext = createContext({
   isAuthenticated: false,
   isAdmin: false,
   isSuperAdmin: false,
+  isSiteAdmin: false,
+  isComplexAdmin: false,
   bootstrapping: true,
   login: async () => {},
   logout: async () => {},
@@ -47,7 +49,7 @@ export function AuthProvider({ children }) {
     // After login, fetch /user/ to get fresh shape (or use returned data in mock)
     const me = (await authApi.me()) || res?.data;
     if (!me) throw new Error("Login failed.");
-    if (me.role !== "SuperAdmin" && me.role !== "Owner") {
+    if (!["SuperAdmin", "SiteAdmin", "Owner"].includes(me.role)) {
       // Staff-only — sign out guests
       await authApi.logout().catch(() => {});
       throw new Error("This console is restricted to staff accounts.");
@@ -73,9 +75,12 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: !!user,
-      // isAdmin = any staff role (SuperAdmin or Owner); isSuperAdmin = platform operator only.
-      isAdmin: user?.role === "SuperAdmin" || user?.role === "Owner",
+      // isAdmin = any staff role; isSuperAdmin = platform operator only;
+      // isComplexAdmin = may run a complex (SuperAdmin or its Site Admin).
+      isAdmin: ["SuperAdmin", "SiteAdmin", "Owner"].includes(user?.role),
       isSuperAdmin: user?.role === "SuperAdmin",
+      isSiteAdmin: user?.role === "SiteAdmin",
+      isComplexAdmin: user?.role === "SuperAdmin" || user?.role === "SiteAdmin",
       bootstrapping,
       login,
       logout,

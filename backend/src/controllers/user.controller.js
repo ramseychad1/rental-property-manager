@@ -8,7 +8,7 @@ import { COOKIE_NAME, cookieOptions } from "../lib/jwt.js";
 import { saveFile, deleteFile } from "../lib/storage.js";
 import { isSuperAdmin } from "../lib/access.js";
 import { generateTempPassword } from "../lib/tempPassword.js";
-import { getDefaultSite, membershipCreate, syncMembership } from "../lib/membership.js";
+import { getDefaultSite, membershipCreate, replaceMembership } from "../lib/membership.js";
 import { sendMail, GOOGLE_OAUTH } from "../lib/mailer.js";
 import { decrypt } from "../lib/crypto.js";
 import { credentialsEmail } from "../lib/emailTemplates.js";
@@ -113,6 +113,7 @@ export async function listAllUsers(req, res, next) {
     const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
         where,
+        include: { memberships: true },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
@@ -169,6 +170,22 @@ const STAFF_ROLES = ["Owner", "SiteAdmin", "SuperAdmin"];
 // Which accounts the signed-in admin may manage. SuperAdmin: anyone. SiteAdmin:
 // Owners and Guests who belong to their own complex - accounts elsewhere look
 // nonexistent (404), and peers or higher are refused.
+// Runs a change that takes a Super Admin out of action (demote, deactivate,
+// delete) and refuses it if that would leave no active Super Admin. The check
+// and the write share a transaction behind an advisory lock, so two Super
+// Admins removing each other at the same moment can't both succeed.
+async function reducingSuperAdmins(target, change) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(7203645)`;
+    const fresh = await tx.user.findUnique({ where: { id: target.id } });
+    if (fresh?.role === "SuperAdmin" && fresh.isActive) {
+      const others = await tx.user.count({ where: { role: "SuperAdmin", isActive: true, id: { not: fresh.id } } });
+      if (others === 0) throw new ApiError("That would leave no active Super Admin. Make someone else a Super Admin first.", 409);
+    }
+    return change(tx);
+  });
+}
+
 async function loadManageableUser(actor, userId, include) {
   const target = await prisma.user.findUnique({ where: { id: userId }, include: { memberships: true, ...include } });
   if (!target) throw new ApiError("User not found.", 404);
@@ -244,20 +261,21 @@ export async function updateUser(req, res, next) {
       .parse(req.body);
 
     const target = await loadManageableUser(req.user, req.params.userId);
-    if (body.role && !isSuperAdmin(req.user)) throw new ApiError("Only a Super Admin can change roles.", 403);
-
-    if (target.id === req.user.id && (body.isActive === false || (body.role && body.role !== target.role))) {
-      throw new ApiError("You can't deactivate or change the role of your own account.", 400);
-    }
-    if (body.role && target.role === "Guest") {
-      throw new ApiError("Guest accounts can't be changed to staff roles here.", 400);
+    if (body.role !== undefined) {
+      throw new ApiError(
+        isSuperAdmin(req.user) ? "Change a user's role and complex from the scope editor." : "Only a Super Admin can change roles.",
+        isSuperAdmin(req.user) ? 400 : 403,
+      );
     }
 
-    const user = await prisma.$transaction(async (tx) => {
-      const updated = await tx.user.update({ where: { id: target.id }, data: body });
-      if (body.role && body.role !== target.role) await syncMembership(tx, target.id, body.role);
-      return updated;
-    });
+    if (target.id === req.user.id && body.isActive === false) {
+      throw new ApiError("You can't deactivate your own account.", 400);
+    }
+
+    const user =
+      body.isActive === false
+        ? await reducingSuperAdmins(target, (tx) => tx.user.update({ where: { id: target.id }, data: body, include: { memberships: true } }))
+        : await prisma.user.update({ where: { id: target.id }, data: body, include: { memberships: true } });
     return ok(res, serializeUser(user), "User updated");
   } catch (err) {
     next(err);
@@ -322,11 +340,6 @@ export async function deleteUser(req, res, next) {
     const target = await loadManageableUser(req.user, req.params.userId, { emailConnection: true });
     if (target.id === req.user.id) throw new ApiError("You can't delete your own account.", 400);
 
-    if (target.role === "SuperAdmin") {
-      const admins = await prisma.user.count({ where: { role: "SuperAdmin" } });
-      if (admins <= 1) throw new ApiError("You can't delete the last Super Admin.", 400);
-    }
-
     const owned = await prisma.property.count({ where: { ownerId: target.id } });
     if (owned > 0) {
       throw new ApiError(
@@ -348,8 +361,49 @@ export async function deleteUser(req, res, next) {
       }
     }
 
-    await prisma.user.delete({ where: { id: target.id } });
+    await reducingSuperAdmins(target, (tx) => tx.user.delete({ where: { id: target.id } }));
     return ok(res, null, "User deleted");
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Super Admin only: set a staff member's role and complex in one step. SuperAdmin
+// is platform-wide (no complex); Site Admin and Owner belong to one complex.
+export async function setUserScope(req, res, next) {
+  try {
+    const body = z
+      .object({ role: z.enum(STAFF_ROLES), siteId: z.string().optional() })
+      .parse(req.body);
+
+    const target = await loadManageableUser(req.user, req.params.userId);
+    if (target.id === req.user.id) throw new ApiError("You can't change your own role or complex.", 400);
+    if (target.role === "Guest") throw new ApiError("Guest accounts can't be changed to staff roles here.", 400);
+
+    let siteId = null;
+    if (body.role !== "SuperAdmin") {
+      if (!body.siteId) throw new ApiError("Choose a complex for this role.", 400);
+      const site = await prisma.site.findUnique({ where: { id: body.siteId } });
+      if (!site || !site.isActive) throw new ApiError("Complex not found.", 400);
+      siteId = site.id;
+
+      // Their properties stay in the complex they were created in.
+      const stranded = await prisma.property.count({ where: { ownerId: target.id, siteId: { not: siteId } } });
+      if (stranded > 0) {
+        throw new ApiError(
+          `${target.name} owns ${stranded} propert${stranded === 1 ? "y" : "ies"} in another complex. Reassign ${stranded === 1 ? "it" : "them"} first.`,
+          409,
+        );
+      }
+    }
+
+    const apply = async (tx) => {
+      const updated = await tx.user.update({ where: { id: target.id }, data: { role: body.role } });
+      await replaceMembership(tx, target.id, body.role, siteId);
+      return updated;
+    };
+    const user = body.role === "SuperAdmin" ? await prisma.$transaction(apply) : await reducingSuperAdmins(target, apply);
+    return ok(res, serializeUser({ ...user, memberships: siteId ? [{ siteId }] : [] }), "Role updated");
   } catch (err) {
     next(err);
   }

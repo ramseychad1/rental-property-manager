@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { FileText, Globe, MapPinned, Home, ImageIcon, Loader2, Mail, Plus, RotateCcw, Save, Trash2, Upload, Building2, Sparkles, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/common/PageHeader";
+import ActiveComplexNotice from "@/components/common/ActiveComplexNotice";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -609,6 +610,7 @@ export default function SiteContentPage() {
 
   return (
     <div className="p-5 md:p-8">
+      <ActiveComplexNotice />
       <PageHeader
         title="Site Content"
         subtitle="Edit the text, images and colors on the public website. Each page below matches a page on the site. Changes appear as soon as you save a section, so save before switching to another one."

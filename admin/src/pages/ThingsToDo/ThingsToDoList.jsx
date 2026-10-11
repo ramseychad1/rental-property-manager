@@ -17,6 +17,7 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 
 import PageHeader from "@/components/common/PageHeader";
+import ActiveComplexNotice from "@/components/common/ActiveComplexNotice";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import StatusBadge from "@/components/common/StatusBadge";
 import EmptyState from "@/components/common/EmptyState";
@@ -187,6 +188,7 @@ export default function ThingsToDoList() {
 
   return (
     <div className="space-y-6">
+      <ActiveComplexNotice />
       <PageHeader
         title="Things To Do"
         subtitle="Manage activities, restaurants, tours, and local recommendations."

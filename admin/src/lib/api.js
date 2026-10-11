@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getActiveSiteId } from "@/lib/activeSite";
 
 // Deliberately relative (not VITE_API_URL): the browser must hit this app's
 // own origin so the backend's session cookie is set as first-party. Vite's
@@ -13,6 +14,12 @@ const http = axios.create({
   timeout: 15000,
   withCredentials: true,
   headers: { "X-Client": "rental-property-manager-admin-panel" },
+});
+
+http.interceptors.request.use((config) => {
+  const siteId = getActiveSiteId();
+  if (siteId) config.headers["X-Site-Id"] = siteId;
+  return config;
 });
 
 // Error handler
@@ -237,6 +244,12 @@ export const usersApi = {
     return data?.data;
   },
 
+  // Super Admin: set a staff member's role and complex in one step.
+  setScope: async (userId, body) => {
+    const { data } = await http.patch(`/user/${userId}/scope`, body);
+    return data?.data;
+  },
+
   resetPassword: async (userId) => {
     const { data } = await http.post(`/user/${userId}/reset-password`);
     return data?.data;
@@ -370,6 +383,11 @@ export const siteContentApi = {
 
 // Complexes and their custom domains (SuperAdmin only).
 export const sitesApi = {
+  // The complex this session is working in (its name, primary origin).
+  current: async () => {
+    const { data } = await http.get("/site/current");
+    return data?.data;
+  },
   list: async () => {
     const { data } = await http.get("/site");
     return data?.data || [];

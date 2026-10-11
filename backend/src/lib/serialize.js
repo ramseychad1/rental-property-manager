@@ -31,6 +31,8 @@ export function serializeUser(u) {
     isActive: u.isActive,
     mustChangePassword: u.mustChangePassword,
     createdAt: u.createdAt,
+    // The complex a staff member belongs to (only when memberships were loaded).
+    siteId: u.memberships?.[0]?.siteId ?? null,
     lastLoginAt: u.lastLoginAt ?? null,
     lastSeenAt: u.lastSeenAt ?? null,
   };

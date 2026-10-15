@@ -16,7 +16,7 @@ import {
   reqSiteId,
 } from "../lib/access.js";
 import { usPhone, usState, usZip, street, city } from "../lib/usContact.js";
-import { buildInstallments } from "../lib/paymentSchedule.js";
+import { buildInstallments, depositFor, bookingDeposit } from "../lib/paymentSchedule.js";
 import { generateBookingDocument, loadBookingDocument } from "../lib/bookingDocument.js";
 
 const HELD_STATUSES = ["pending", "accepted", "booked"];
@@ -113,6 +113,10 @@ async function computePricing(propertyId, checkIn, checkOut, addOnIds = []) {
   const addOnsTotal = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
 
   const total = subTotal + property.priceCleaningFee + property.priceServiceFee + taxes + addOnsTotal;
+  // The security deposit is charged on top of the total, in the one payment
+  // (or the first installment of a schedule). It's recorded here so it stays
+  // fixed for the booking even if the property's setting changes later.
+  const depositAmount = depositFor(property);
 
   return {
     property,
@@ -128,6 +132,8 @@ async function computePricing(propertyId, checkIn, checkOut, addOnIds = []) {
       addOns: selectedAddOns,
       addOnsTotal,
       total,
+      depositAmount,
+      totalDue: total + depositAmount,
     },
   };
 }
@@ -389,6 +395,7 @@ export async function acceptBooking(req, res, next) {
             property: existing.property,
             checkIn: existing.checkIn,
             total: existing.totalAmount,
+            deposit: typeof existing.pricing?.depositAmount === "number" ? existing.pricing.depositAmount : depositFor(existing.property),
           });
           await tx.bookingInstallment.createMany({
             data: installments.map((i) => ({ ...i, bookingId: existing.id })),
@@ -495,6 +502,9 @@ export async function updateBookingAddOns(req, res, next) {
     }
 
     const { pricing, selectedAddOns } = await computePricing(booking.propertyId, booking.checkIn, booking.checkOut, addOnIds);
+    // Add-ons change the total, not the deposit the booking was made with.
+    pricing.depositAmount = bookingDeposit(booking);
+    pricing.totalDue = pricing.total + pricing.depositAmount;
 
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
@@ -504,7 +514,7 @@ export async function updateBookingAddOns(req, res, next) {
 
       if (booking.installments.length > 0) {
         const property = await tx.property.findUnique({ where: { id: booking.propertyId } });
-        const installments = buildInstallments({ property, checkIn: booking.checkIn, total: pricing.total });
+        const installments = buildInstallments({ property, checkIn: booking.checkIn, total: pricing.total, deposit: pricing.depositAmount });
         await tx.bookingInstallment.deleteMany({ where: { bookingId: booking.id } });
         await tx.bookingInstallment.createMany({ data: installments.map((i) => ({ ...i, bookingId: booking.id })) });
       }

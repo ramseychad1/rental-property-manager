@@ -5,6 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import { fmtStayDate } from "./emailTemplates.js";
+import { bookingDeposit } from "./paymentSchedule.js";
 import { cleanForPdf, reflowParagraphs } from "./textClean.js";
 import { prisma } from "./prisma.js";
 import { savePrivate, readPrivate, deletePrivate } from "./storage.js";
@@ -127,7 +128,14 @@ export function buildBookingPdf(b) {
   heading(doc, "Price");
   for (const [l, r] of priceLines(b)) row(doc, l, r);
   doc.moveDown(0.3);
-  row(doc, "Total", money(b.totalAmount), { bold: true });
+  const deposit = bookingDeposit(b);
+  if (deposit > 0) {
+    row(doc, "Rental total", money(b.totalAmount));
+    row(doc, "Security deposit", money(deposit));
+    row(doc, "Total due", money(b.totalAmount + deposit), { bold: true });
+  } else {
+    row(doc, "Total", money(b.totalAmount), { bold: true });
+  }
 
   // Every add-on the property offers as a checkbox list, ticked where the
   // renter selected it. Anything on the booking that the property has since

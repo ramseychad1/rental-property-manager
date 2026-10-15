@@ -1,6 +1,8 @@
 // Plain, table-free HTML emails with inline styles (mail clients ignore
 // <style> blocks inconsistently). Every template returns { subject, html, text }.
 // All user-supplied text goes through esc().
+import { bookingDeposit } from "./paymentSchedule.js";
+
 
 export const esc = (v) =>
   String(v ?? "")
@@ -85,7 +87,14 @@ function priceRows(b) {
   if (pricing.serviceFee) rows.push(["Service fee", money(pricing.serviceFee)]);
   for (const addOn of pricing.addOns || []) rows.push([addOn.label, money(addOn.price)]);
   if (pricing.taxes) rows.push([`Taxes (${pricing.taxRate}%)`, money(pricing.taxes)]);
-  rows.push(["Total", money(b.totalAmount)]);
+  const deposit = bookingDeposit(b);
+  if (deposit > 0) {
+    rows.push(["Rental total", money(b.totalAmount)]);
+    rows.push(["Security deposit", money(deposit)]);
+    rows.push(["Total due", money(b.totalAmount + deposit)]);
+  } else {
+    rows.push(["Total", money(b.totalAmount)]);
+  }
   return rows;
 }
 

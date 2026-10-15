@@ -183,7 +183,7 @@ export default function PaymentScheduleFields({
           <div>
             <Label htmlFor="deposit-enabled">Security deposit</Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              A flat amount added to the first payment due, called out separately.
+              A flat amount charged on top of the total, shown to renters as its own line. It goes in the first payment (or the one payment, if there's no schedule).
             </p>
           </div>
         </div>

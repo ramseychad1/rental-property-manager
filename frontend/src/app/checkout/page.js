@@ -146,6 +146,8 @@ function buildPricing(checkIn, checkOut, seasons, property, addOnIds = []) {
   const addOnsTotal = selectedAddOns.reduce((s, a) => s + a.price, 0);
 
   const total = subTotal + cleaningFee + serviceFee + taxes + addOnsTotal;
+  // Security deposit: charged on top of the total, with the first payment.
+  const deposit = property?.depositEnabled && property?.depositAmount > 0 ? property.depositAmount : 0;
 
   return {
     segments,
@@ -157,6 +159,8 @@ function buildPricing(checkIn, checkOut, seasons, property, addOnIds = []) {
     selectedAddOns,
     addOnsTotal,
     total,
+    deposit,
+    totalDue: total + deposit,
     nights,
   };
 }
@@ -1185,12 +1189,21 @@ function CheckoutInner() {
                   value={formatCurrency(pricing?.taxes || 0)}
                 />
 
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 space-y-3">
                   <Row
-                    label="Total"
+                    label={pricing?.deposit > 0 ? "Rental total" : "Total"}
                     value={formatCurrency(pricing?.total || 0)}
                     bold
                   />
+                  {pricing?.deposit > 0 && (
+                    <>
+                      <Row
+                        label="Security deposit (due with your first payment)"
+                        value={formatCurrency(pricing.deposit)}
+                      />
+                      <Row label="Total due" value={formatCurrency(pricing.totalDue)} bold />
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1228,7 +1241,7 @@ function CheckoutInner() {
             {submitting && <Loader2 className="h-5 w-5 animate-spin mr-2" />}
 
             {isLoggedIn
-              ? `Request Booking • ${formatCurrency(pricing?.total || 0)}`
+              ? `Request Booking • ${formatCurrency(pricing?.totalDue ?? pricing?.total ?? 0)}`
               : "Sign In To Request Booking"}
           </Button>
         </form>

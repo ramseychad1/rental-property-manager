@@ -166,6 +166,8 @@ export default function AvailabilityCard({
     const selectedAddOns = addOnCatalog.filter((a) => addOnIds.includes(a.id));
     const addOnsTotal = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
     const total = subTotal + cleaningFee + serviceFee + taxes + addOnsTotal;
+    // Security deposit: charged on top of the total, with the first payment.
+    const deposit = property?.depositEnabled && property?.depositAmount > 0 ? property.depositAmount : 0;
     const averageNightly = Math.round(subTotal / nights);
     const hasMultipleSeasons =
       segments.length > 1 || segments[0]?.seasonId !== "__default__";
@@ -179,10 +181,12 @@ export default function AvailabilityCard({
       selectedAddOns,
       addOnsTotal,
       total,
+      deposit,
+      totalDue: total + deposit,
       averageNightly,
       hasMultipleSeasons,
     };
-  }, [checkIn, checkOut, nights, segments, cleaningFee, serviceFee, taxRate, addOnCatalog, addOnIds]);
+  }, [checkIn, checkOut, nights, segments, cleaningFee, serviceFee, taxRate, addOnCatalog, addOnIds, property?.depositEnabled, property?.depositAmount]);
 
   // ── sync calculated pricing into BookingContext ───────────────────────────
   // Runs whenever pricing changes so checkout always has the latest numbers.
@@ -370,9 +374,21 @@ export default function AvailabilityCard({
           </div> */}
 
           <div className="flex justify-between pt-2 border-t border-[var(--color-border)] font-semibold text-[var(--color-foreground)]">
-            <span>Total</span>
+            <span>{pricing.deposit > 0 ? "Rental total" : "Total"}</span>
             <span>{formatCurrency(pricing.total)}</span>
           </div>
+          {pricing.deposit > 0 && (
+            <>
+              <div className="flex justify-between text-[var(--color-muted-foreground)]" data-testid="deposit-line">
+                <span>Security deposit (due with your first payment)</span>
+                <span>{formatCurrency(pricing.deposit)}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[var(--color-border)] font-semibold text-[var(--color-foreground)]">
+                <span>Total due</span>
+                <span>{formatCurrency(pricing.totalDue)}</span>
+              </div>
+            </>
+          )}
         </div>
       )}
 

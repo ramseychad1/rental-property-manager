@@ -16,11 +16,25 @@ export function dueDateFor(term, checkIn, now) {
   return d;
 }
 
+// The flat security deposit a property currently asks for (0 when off).
+export const depositFor = (property) =>
+  property?.depositEnabled && property.depositAmount > 0 ? property.depositAmount : 0;
+
+// The deposit on a booking: the amount snapshotted into its pricing when it was
+// made. Bookings from before that was recorded fall back to what their
+// installments carry (0 if none).
+export function bookingDeposit(b) {
+  const snap = b?.pricing?.depositAmount;
+  if (typeof snap === "number") return snap;
+  return (b?.installments || []).reduce((s, i) => s + (i.depositAmount || 0), 0);
+}
+
 // Builds the installment rows for a booking. `total` is the booking's
 // totalAmount (nightly + cleaning + service fee + tax, matching the "full
 // total" decision). Amounts are rounded per-term and the last term absorbs any
-// rounding remainder so they always sum to exactly `total`. The property's
-// flat security deposit, if enabled, is added to the first-listed installment.
+// rounding remainder so they always sum to exactly `total`. The security
+// deposit (on top of `total`, not part of the percentages) is added to the
+// first-listed installment, so the installments sum to total + deposit.
 //
 // Deliberately NOT sorted by due date: the owner's own order (e.g. "Down
 // Payment", "Installment 1", "Final Payment") is the order shown everywhere -
@@ -31,7 +45,7 @@ export function dueDateFor(term, checkIn, now) {
 // due "upon booking" once check-in is close. Due date still decides whether a
 // term is due-now vs. upcoming (see paymentScheduleRows in emailTemplates.js);
 // it just never reorders the list.
-export function buildInstallments({ property, checkIn, total, now = new Date() }) {
+export function buildInstallments({ property, checkIn, total, deposit = depositFor(property), now = new Date() }) {
   const terms = Array.isArray(property.paymentTerms) ? property.paymentTerms : [];
   if (!terms.length) return [];
 
@@ -52,10 +66,10 @@ export function buildInstallments({ property, checkIn, total, now = new Date() }
     };
   });
 
-  if (property.depositEnabled && property.depositAmount > 0) {
-    rows[0].amount += property.depositAmount;
+  if (deposit > 0) {
+    rows[0].amount += deposit;
     rows[0].includesDeposit = true;
-    rows[0].depositAmount = property.depositAmount;
+    rows[0].depositAmount = deposit;
   }
 
   return rows;

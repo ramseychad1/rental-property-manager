@@ -1,4 +1,5 @@
 import { normalizeMD } from "./seasonRange.js";
+import { bookingDeposit } from "./paymentSchedule.js";
 
 export const dateOnly = (d) => (d ? new Date(d).toISOString().slice(0, 10) : d);
 
@@ -162,7 +163,9 @@ export function serializeBooking(b) {
       zip: b.guestZip ?? "",
     },
     notes: b.notes ?? "",
-    pricing: b.pricing ?? null,
+    // `depositAmount`/`totalDue` are always present for the clients, including
+    // on bookings made before the deposit was recorded in the snapshot.
+    pricing: b.pricing ? { ...b.pricing, depositAmount: bookingDeposit(b), totalDue: b.totalAmount + bookingDeposit(b) } : null,
     totalAmount: b.totalAmount,
     selectedAddOns: b.selectedAddOns ?? [],
     bookingStatus: b.bookingStatus,

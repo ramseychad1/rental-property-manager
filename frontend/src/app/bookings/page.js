@@ -138,10 +138,15 @@ function BookingCard({ b }) {
             <div className="flex items-center gap-2 text-[var(--color-muted-foreground)]">
               <CreditCard className="h-4 w-4 text-[var(--color-primary)] shrink-0" />
               <div>
-                <div className="text-[10px] uppercase tracking-wide font-medium text-[var(--color-muted-foreground)]">Total</div>
+                <div className="text-[10px] uppercase tracking-wide font-medium text-[var(--color-muted-foreground)]">{b.pricing?.depositAmount > 0 ? "Total due" : "Total"}</div>
                 <div className="font-display text-base font-bold text-[var(--color-foreground)]">
-                  {formatCurrency(b.totalAmount ?? 0)}
+                  {formatCurrency(b.pricing?.depositAmount > 0 ? b.pricing.totalDue : (b.totalAmount ?? 0))}
                 </div>
+                {b.pricing?.depositAmount > 0 && (
+                  <div className="text-[10px] text-[var(--color-muted-foreground)]" data-testid="booking-deposit-note">
+                    {formatCurrency(b.totalAmount ?? 0)} + {formatCurrency(b.pricing.depositAmount)} security deposit
+                  </div>
+                )}
               </div>
             </div>
           </div>

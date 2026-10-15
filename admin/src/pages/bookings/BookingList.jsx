@@ -395,6 +395,11 @@ console.log(data)
                   </TableCell>
                   <TableCell className="font-mono font-semibold">
                     {fmtCurrency(booking.totalAmount)}
+                    {booking.pricing?.depositAmount > 0 && (
+                      <div className="text-[11px] font-normal text-muted-foreground">
+                        + {fmtCurrency(booking.pricing.depositAmount)} deposit
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={booking.bookingStatus} />
@@ -497,11 +502,16 @@ console.log(data)
                   </Card>
                   <Card className="p-4 rounded-xl">
                     <div className="overline flex items-center gap-1">
-                      <DollarSign className="w-3 h-3" /> Total
+                      <DollarSign className="w-3 h-3" /> {active.pricing?.depositAmount > 0 ? "Total due" : "Total"}
                     </div>
                     <div className="mt-1 font-mono font-semibold text-sm">
-                      {fmtCurrency(active.totalAmount)}
+                      {fmtCurrency(active.pricing?.depositAmount > 0 ? active.pricing.totalDue : active.totalAmount)}
                     </div>
+                    {active.pricing?.depositAmount > 0 && (
+                      <div className="text-[11px] text-muted-foreground" data-testid="booking-deposit-note">
+                        {fmtCurrency(active.totalAmount)} + {fmtCurrency(active.pricing.depositAmount)} security deposit
+                      </div>
+                    )}
                   </Card>
                 </div>
 

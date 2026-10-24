@@ -26,8 +26,8 @@ This is a single-tenant build. Multi-tenancy (one deployment serving multiple pr
 | Admin console | https://admin-production-bbad.up.railway.app |
 | Backend API | https://backend-production-933a.up.railway.app |
 
-Admin login (seeded, same locally and in production):
-- Admin — `admin@rentalpropertymanager.com` / `Admin123!`
+Admin login (created by the seed script):
+- Admin — `admin@rentalpropertymanager.com`. Locally the seed uses `SEED_ADMIN_PASSWORD` or prints a generated one; the production password was changed after the October 2026 Railway security incident.
 
 No demo guest account or placeholder properties — real properties get added through the admin panel.
 
@@ -180,7 +180,7 @@ docker compose up -d          # local Postgres on localhost:5434
 cp .env.example .env          # set JWT_SECRET to a real random value
 npm install
 npx prisma migrate dev        # applies schema, generates client
-node prisma/seed.js           # admin@rentalpropertymanager.com / Admin123! - no demo guest or properties
+node prisma/seed.js           # creates admin@rentalpropertymanager.com (password from SEED_ADMIN_PASSWORD, or generated and printed once) - no demo guest or properties
 npm run dev
 ```
 

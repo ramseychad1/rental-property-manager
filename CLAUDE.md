@@ -31,7 +31,7 @@ Workspace `rental-property`, project `rental-property-manager`. Unlike the prior
 | Backend API | https://backend-production-933a.up.railway.app (health: `/api/health`) |
 
 Admin login (seeded by `prisma/seed.js`):
-- SuperAdmin: `admin@rentalpropertymanager.com` / `Admin123!` (this is the platform operator; create Owners from the admin panel's Users page)
+- SuperAdmin: `admin@rentalpropertymanager.com` (this is the platform operator; create Owners from the admin panel's Users page). The seed takes its password from `SEED_ADMIN_PASSWORD` (or generates and prints one); the production password was changed after the Oct 2026 Railway security incident.
 
 No demo guest account or placeholder properties are seeded — this is a genuinely clean start, add real properties through the admin panel.
 
@@ -68,7 +68,7 @@ docker compose up -d         # local Postgres on localhost:5434 (see docker-comp
 cp .env.example .env          # then set JWT_SECRET to a real random value
 npm install
 npx prisma migrate dev        # applies schema, generates client
-node prisma/seed.js           # admin@rentalpropertymanager.com / Admin123! - no demo guest or properties
+node prisma/seed.js           # creates admin@rentalpropertymanager.com (password from `SEED_ADMIN_PASSWORD`, or generated and printed once) - no demo guest or properties
 npm run dev                   # node --watch src/server.js, serves http://localhost:8001/api
 ```
 No test script is defined. `npm run lint` runs eslint.

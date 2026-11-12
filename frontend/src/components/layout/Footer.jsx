@@ -123,7 +123,7 @@ export default function Footer({ brand }) {
         </div>
       </div>
       <div className=" py-2 text-center bg-[var(--color-teal-top)] text-white font-semibold">
-        Copyright {new Date().getFullYear()} {brand.siteName} &middot; ALL RIGHTS RESERVED
+        Copyright {new Date().getFullYear()} {brand.siteName} &middot; All Rights Reserved
       </div>
     </footer>
   );
